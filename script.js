@@ -9,8 +9,7 @@
 (function () {
   "use strict";
 
-  // --- Tiny marker so you can confirm load in DevTools ---
-  // (F12 → Console should show this once)
+  // Marker logs (check DevTools console)
   try { console.log("[FreedomNumber] script loaded"); } catch {}
 
   // ---------- Helpers ----------
@@ -56,7 +55,10 @@
   function renderTablesEditable(regs, plans) {
     const regBody  = q("#regTable tbody");
     const planBody = q("#planTable tbody");
-    if (!regBody || !planBody) return;
+    if (!regBody || !planBody) {
+      console.warn("[FreedomNumber] regTable/planTable tbody not found.");
+      return;
+    }
 
     regBody.innerHTML = "";
     regs.forEach((r, idx) => {
@@ -341,7 +343,8 @@
     bootstrapTablesFromDOM();
 
     // 2) Non-table inputs: recompute on change
-    qa("#calc input").forEach(inp => {
+    //    (bind to ALL inputs, not just under #calc — this was the main issue)
+    qa("input").forEach(inp => {
       if (inp.closest("#regTable") || inp.closest("#planTable")) return; // tables bind separately
       inp.addEventListener("input", recompute, { passive: true });
     });
