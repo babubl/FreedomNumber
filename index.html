@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Financial Freedom Calculator (India) — Modern, Interactive</title>
+  <style>
+    /* ===== Design System ===== */
+    :root{
+      --bg:#0b1020;            /* deep space */
+      --bg-2:#0f1832;          /* section bg */
+      --card:#0f1222;          /* card */
+      --ink:#e8ecff;           /* text */
+      --muted:#a9b3d9;         /* muted text */
+      --line:#242b4a;          /* borders */
+      --accent:#7c5cff;        /* primary */
+      --accent-2:#05d5ff;      /* secondary */
+      --good:#22c55e;          /* green */
+      --warn:#f59e0b;          /* amber */
+      --bad:#ef4444;           /* red */
+      --glow:0 10px 40px rgba(124,92,255,.35);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:radial-gradient(1200px 700px at 20% -10%, rgba(124,92,255,.15), transparent 40%), radial-gradient(1200px 700px at 120% 10%, rgba(5,213,255,.10), transparent 40%), var(--bg); color:var(--ink); font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;}
+    a{color:var(--accent-2)} a:hover{text-decoration:underline}
+    .wrap{max-width:1200px;margin:auto;padding:24px}
+    .section{margin:24px 0}
+
+    /* ===== Hero ===== */
+    .hero{position:relative; padding:48px 24px; border-radius:28px; background:linear-gradient(135deg, rgba(124,92,255,.18), rgba(5,213,255,.14)); overflow:hidden}
+    .hero::after{content:""; position:absolute; inset:-1px; border-radius:32px; padding:1px; background:linear-gradient(135deg, rgba(124,92,255,.5), rgba(5,213,255,.5)); -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;}
+    .hero h1{font-size:34px; margin:0 0 10px; letter-spacing:.2px}
+    .subtitle{color:var(--muted); max-width:900px}
+    .cta{margin-top:18px; display:flex; gap:10px; flex-wrap:wrap}
+    .btn{border:0; border-radius:14px; padding:10px 14px; background:var(--accent); color:white; cursor:pointer; font-weight:600; box-shadow:var(--glow); transition:transform .2s ease, filter .2s ease}
+    .btn:hover{transform:translateY(-2px); filter:brightness(1.05)}
+    .btn.ghost{background:transparent; border:1px solid var(--accent-2); color:var(--accent-2)}
+
+    /* ===== Cards & Layout ===== */
+    .grid{display:grid; gap:18px}
+    @media (min-width:980px){ .grid.cols-2{grid-template-columns:1fr 1fr} .grid.cols-3{grid-template-columns:1fr 1fr 1fr} }
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:0 10px 40px rgba(0,0,0,.25)}
+    h2{margin:0 0 12px; font-size:20px}
+    label{font-size:12px; color:var(--muted); display:block}
+    input{width:100%; background:#0b0f20; color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px}
+    input:focus{outline:2px solid rgba(124,92,255,.45); border-color:transparent}
+
+    .kpi{background:linear-gradient(180deg, rgba(124,92,255,.08), rgba(124,92,255,.02)); border:1px solid var(--line); border-radius:16px; padding:14px}
+    .kpi .t{font-size:12px; color:var(--muted)} .kpi .v{font-weight:800; font-size:22px}
+
+    /* ===== Info blocks ===== */
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:#0c1330}
+    .callout{border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; padding:12px; background:#0c1330}
+
+    /* ===== Tabs ===== */
+    .tabs{display:flex; gap:8px; border-bottom:1px solid var(--line); margin-bottom:12px; flex-wrap:wrap}
+    .tab{padding:10px 12px; border-radius:12px 12px 0 0; background:#0c1330; border:1px solid var(--line); border-bottom:0; cursor:pointer; font-weight:600; color:var(--muted)}
+    .tab.active{background:linear-gradient(180deg, rgba(124,92,255,.15), rgba(124,92,255,.05)); color:var(--ink)}
+
+    /* ===== Interactive Table ===== */
+    .table-wrap{border:1px solid var(--line); border-radius:16px; overflow:hidden; background:#0b0f20}
+    table{width:100%; border-collapse:separate; border-spacing:0; font-size:13px}
+    thead th{position:sticky; top:0; background:#0c1330; color:var(--ink); text-align:left; padding:12px; border-bottom:1px solid var(--line); cursor:pointer; user-select:none}
+    thead th.sortable:hover{background:#0f1638}
+    tbody td{padding:12px; border-top:1px solid var(--line)}
+    tbody tr:hover{background:rgba(124,92,255,.06)}
+    .num{text-align:right}
+    .pager{display:flex; justify-content:flex-end; gap:8px; padding:10px}
+    .pager button{background:#0c1330; color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:6px 10px; cursor:pointer}
+    .pager button[disabled]{opacity:.4; cursor:not-allowed}
+
+    /* ===== Chart ===== */
+    .chart{height:220px; width:100%; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:linear-gradient(180deg, rgba(5,213,255,.06), rgba(124,92,255,.06))}
+    canvas{width:100%; height:100%}
+
+    .small{font-size:12px; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Hero -->
+    <section class="hero section">
+      <h1>Financial Freedom Calculator (India)</h1>
+      <div class="subtitle">Plan your expenses year-by-year, add a safety buffer, and compute the <span class="pill">Required Starting Corpus</span> so your portfolio lasts till your chosen age. Beautiful. Fast. Accurate for Indian assumptions.</div>
+      <div class="cta">
+        <button class="btn" onclick="scrollToCalc()">Start Planning</button>
+        <button class="btn ghost" onclick="document.getElementById('why').scrollIntoView({behavior:'smooth'})">Why not 4%?</button>
+      </div>
+    </section>
+
+    <!-- Why 4% falls short -->
+    <section id="why" class="section card">
+      <div class="tabs">
+        <button class="tab active" data-tab="what">4% in 30 seconds</button>
+        <button class="tab" data-tab="assumptions">What it assumed</button>
+        <button class="tab" data-tab="limits">Why India is different</button>
+        <button class="tab" data-tab="howtool">What this tool does better</button>
+      </div>
+      <div id="tab-what" class="tabp">
+        <div class="callout"><strong>The story:</strong> In <b>1994</b>, planner <b>William P. Bengen</b> crunched U.S. data and found that if you withdraw <b>4% in year 1</b> and then raise that rupee amount by inflation, a 60/40 portfolio often survives ~<b>30 years</b>. It was a breakthrough because it turned a fuzzy question (“How much can I spend?”) into a simple rule. <em>Great for America in the 90s. Not a law of physics.</em></div>
+        <ul>
+          <li><b>Why it felt magical:</b> One number. No spreadsheets. Sleep at night.</li>
+          <li><b>The catch:</b> It was calibrated to <i>their</i> inflation, <i>their</i> bonds, and <i>their</i> taxes—<b>not</b> ours.</li>
+        </ul>
+      </div>
+      <div id="tab-assumptions" class="tabp" style="display:none">
+        <ul>
+          <li>Horizon ≈ <b>30 years</b></li>
+          <li>Inflation ≈ <b>3%</b> (U.S. historical)</li>
+          <li>Portfolio ≈ <b>50% stocks / 50% treasuries</b></li>
+          <li>Nominal returns ≈ <b>7–8%</b></li>
+          <li><b>No taxes</b> or product fees modeled</li>
+        </ul>
+        <div class="small">That’s the scaffolding behind the 25× thumb rule (expense × 25).</div>
+      </div>
+      <div id="tab-limits" class="tabp" style="display:none">
+        <div class="callout"><strong>India ≠ U.S.</strong> Our reality bends the math:</div>
+        <ul>
+          <li><b>Inflation runs hotter:</b> headline ~<b>6–7%</b>, healthcare often <b>10–12%</b></li>
+          <li><b>Taxes & products:</b> more drag on post‑tax returns</li>
+          <li><b>Volatility:</b> drawdown risk and sequence risk are larger</li>
+          <li><b>Longer horizons:</b> early retirement can mean <b>35–45 years</b></li>
+        </ul>
+        <div class="callout small">So a flat “4% forever” can be aggressive here. Many Indian planners aim closer to <b>3.0–3.5%</b> (≈ <b>33×–40×</b> annual expenses) for safety. The video transcript makes the same point: 25× is convenient, not precise.</div>
+      </div>
+      <div id="tab-howtool" class="tabp" style="display:none">
+        <ul>
+          <li><b>Line‑item realism:</b> every expense has its own growth rate and tenure</li>
+          <li><b>Life events baked in:</b> e.g., education at 45, renovation at 50, with item‑specific inflation</li>
+          <li><b>Safety buffer:</b> add a margin each year to handle uncertainty</li>
+          <li><b>Auto goal‑seek:</b> computes the <i>required starting corpus</i> so the plan ends ≈ ₹0 at your life age</li>
+        </ul>
+        <div class="callout small">Net effect: a model tuned for Indian inflation, taxes, and timelines—more faithful than the American 4% shorthand.</div>
+      </div>
+    </section>
+
+    <!-- Calculator -->
+    <section id="calc" class="section">
+      <div class="grid cols-2">
+        <div class="card">
+          <h2>Key Inputs</h2>
+          <div class="grid cols-2" style="margin-top:8px">
+            <div><label>Current Age</label><input id="currentAge" type="number" value="40"></div>
+            <div><label>Target Freedom Age</label><input id="freedomAge" type="number" value="55"></div>
+            <div><label>Life Expectancy Age</label><input id="lifeAge" type="number" value="85"></div>
+            <div><label>General Inflation (default)</label><input id="inflation" type="number" step="0.001" value="0.06"><span class="small">0.06 = 6%</span></div>
+            <div><label>Post‑tax Return on Corpus</label><input id="ret" type="number" step="0.001" value="0.08"><span class="small">0.08 = 8%</span></div>
+            <div><label>Buffer / Safety Margin</label><input id="buffer" type="number" step="0.001" value="0.15"><span class="small">0.15 = 15%</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Quick Summary</h2>
+          <div class="grid cols-2" style="margin-top:8px">
+            <div class="kpi"><div class="t">Annual Expense Today (active)</div><div class="v" id="kpiAnnual">—</div></div>
+            <div class="kpi"><div class="t">Quick 40× (India SWR≈3%)</div><div class="v" id="kpi40x">—</div></div>
+            <div class="kpi"><div class="t">Required Starting Corpus</div><div class="v" id="kpiReq">—</div></div>
+            <div class="kpi"><div class="t">Max Corpus During Plan</div><div class="v" id="kpiMax">—</div></div>
+          </div>
+          <div class="chart" style="margin-top:12px"><canvas id="chart"></canvas></div>
+          <div class="small" style="margin-top:8px">Graph: Ending corpus over age (using required start).</div>
+        </div>
+      </div>
+
+      <!-- STACKED tables -->
+      <div class="section">
+        <div class="card" style="margin-bottom:18px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <h2>Regular Expenses</h2>
+            <button class="btn" id="addReg">+ Add Item</button>
+          </div>
+          <div class="small" style="margin:6px 0 10px">Annual amounts in today’s ₹. Each item grows at its own rate and turns off after its tenure.</div>
+          <div class="table-wrap"><table id="regTable">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th class="num">Amount Today (₹/yr)</th>
+                <th class="num">Growth / yr</th>
+                <th class="num">Tenure (yrs)</th>
+                <th class="num">Start Age</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <h2>Planned / One‑time Expenses</h2>
+            <button class="btn" id="addPlan">+ Add Event</button>
+          </div>
+          <div class="small" style="margin:6px 0 10px">Triggers at event age; inflated from today by the item’s inflation.</div>
+          <div class="table-wrap"><table id="planTable">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th class="num">Event Age</th>
+                <th class="num">Amount Today (₹)</th>
+                <th class="num">Inflation</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="card section">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2>Results</h2>
+          <div class="small">Ending corpus should be near zero (± tolerance) at age <span id="lifeAgeEcho">85</span>.</div>
+        </div>
+        <div class="grid cols-3" style="margin-top:8px">
+          <div class="kpi"><div class="t">Ending Corpus (with required start)</div><div class="v" id="ending">—</div></div>
+          <div class="kpi"><div class="t">Freedom Age (starts discretionary)</div><div class="v" id="freeAge">55</div></div>
+          <div class="kpi"><div class="t">Rows</div><div class="v" id="rowCount">—</div></div>
+        </div>
+
+        <div class="table-wrap" style="margin-top:12px">
+          <table id="projTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-key="age">Age ▲▼</th>
+                <th class="sortable num" data-key="reg">Regular (₹)</th>
+                <th class="sortable num" data-key="planned">Planned (₹)</th>
+                <th class="sortable num" data-key="total">Total (₹)</th>
+                <th class="sortable num" data-key="totalWithBuffer">+ Buffer (₹)</th>
+                <th class="sortable num" data-key="startCorpus">Start Corpus (₹)</th>
+                <th class="sortable num" data-key="ret">Return (₹)</th>
+                <th class="sortable num" data-key="endCorpus">End Corpus (₹)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="pager" id="pager"></div>
+        </div>
+        <div class="small" style="margin-top:10px">Education-only tool. Taxes, fees, and sequence risk matter. Review annually; consider a conservative buffer.</div>
+      </div>
+    </section>
+
+  </div>
+
+<script>
+// ===== Utilities =====
+const fmt = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const R = (n) => isFinite(n) ? fmt.format(Math.round(n)) : "—";
+const $ = (id) => document.getElementById(id);
+function scrollToCalc(){ $('calc').scrollIntoView({behavior:'smooth'}); }
+
+// ===== Tabs logic =====
+const tabs = document.querySelectorAll('.tab');
+tabs.forEach(btn=>btn.addEventListener('click', ()=>{
+  tabs.forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const key = btn.dataset.tab;
+  document.querySelectorAll('.tabp').forEach(p=>p.style.display='none');
+  $('tab-' + key).style.display = '';
+}));
+
+// ===== Default Data =====
+let inputs = { currentAge:40, freedomAge:55, lifeAge:85, inflation:0.06, ret:0.08, buffer:0.15 };
+let regular = [
+  { id: 1, category: "Housing & Utilities", amountToday: 360000, growth: 0.05, tenure: 45, startAge: 40 },
+  { id: 2, category: "Groceries & Essentials", amountToday: 240000, growth: 0.06, tenure: 999, startAge: 40 },
+  { id: 3, category: "Transport", amountToday: 120000, growth: 0.05, tenure: 999, startAge: 40 },
+  { id: 4, category: "Healthcare & Insurance", amountToday: 150000, growth: 0.10, tenure: 999, startAge: 40 },
+  { id: 5, category: "Discretionary (Dining/Travel)", amountToday: 180000, growth: 0.07, tenure: 30, startAge: 55 },
+  { id: 6, category: "Parents Support", amountToday: 120000, growth: 0.06, tenure: 10, startAge: 40 },
+  { id: 7, category: "Children Schooling", amountToday: 200000, growth: 0.08, tenure: 10, startAge: 40 },
+];
+let planned = [
+  { id: 1, event: "Child Higher Education", eventAge: 45, amountToday: 10000000, infl: 0.06 },
+  { id: 2, event: "Home Renovation", eventAge: 50, amountToday: 2500000, infl: 0.06 },
+  { id: 3, event: "Car Replacement", eventAge: 60, amountToday: 2000000, infl: 0.05 },
+  { id: 4, event: "Medical Contingency", eventAge: 70, amountToday: 3000000, infl: 0.10 },
+];
+
+// ===== Render Regular & Planned Tables =====
+function renderEditableTable(){
+  // Regular
+  const rtb = document.querySelector('#regTable tbody'); rtb.innerHTML = '';
+  for(const r of regular){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input value="${r.category}" data-id="${r.id}" data-k="category"></td>
+      <td class="num"><input type="number" value="${r.amountToday}" data-id="${r.id}" data-k="amountToday"></td>
+      <td class="num"><input type="number" step="0.001" value="${r.growth}" data-id="${r.id}" data-k="growth"><div class="small">0.06 = 6%</div></td>
+      <td class="num"><input type="number" value="${r.tenure}" data-id="${r.id}" data-k="tenure"></td>
+      <td class="num"><input type="number" value="${r.startAge}" data-id="${r.id}" data-k="startAge"></td>
+      <td><button class="btn" style="padding:6px 10px;background:#1f2937" data-id="${r.id}" data-act="delReg">Remove</button></td>`;
+    rtb.appendChild(tr);
+  }
+  // Planned
+  const ptb = document.querySelector('#planTable tbody'); ptb.innerHTML = '';
+  for(const p of planned){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input value="${p.event}" data-id="${p.id}" data-k="event" data-type="planned"></td>
+      <td class="num"><input type="number" value="${p.eventAge}" data-id="${p.id}" data-k="eventAge" data-type="planned"></td>
+      <td class="num"><input type="number" value="${p.amountToday}" data-id="${p.id}" data-k="amountToday" data-type="planned"></td>
+      <td class="num"><input type="number" step="0.001" value="${p.infl}" data-id="${p.id}" data-k="infl" data-type="planned"><div class="small">0.06 = 6%</div></td>
+      <td><button class="btn" style="padding:6px 10px;background:#1f2937" data-id="${p.id}" data-act="delPlan">Remove</button></td>`;
+    ptb.appendChild(tr);
+  }
+  // Bind
+  document.querySelectorAll('#regTable input').forEach(inp=>{
+    inp.addEventListener('input', (e)=>{
+      const id = Number(e.target.dataset.id), k = e.target.dataset.k;
+      const row = regular.find(x=>x.id===id); if(!row) return;
+      row[k] = (k==='category') ? e.target.value : Number(e.target.value);
+      recompute();
+    });
+  });
+  document.querySelectorAll('#planTable input').forEach(inp=>{
+    inp.addEventListener('input', (e)=>{
+      const id = Number(e.target.dataset.id), k = e.target.dataset.k;
+      const row = planned.find(x=>x.id===id); if(!row) return;
+      row[k] = (k==='event') ? e.target.value : Number(e.target.value);
+      recompute();
+    });
+  });
+  document.querySelectorAll('button[data-act="delReg"]').forEach(btn=>btn.addEventListener('click', (e)=>{
+    const id = Number(e.target.dataset.id); regular = regular.filter(x=>x.id!==id); renderEditableTable(); recompute();
+  }));
+  document.querySelectorAll('button[data-act="delPlan"]').forEach(btn=>btn.addEventListener('click', (e)=>{
+    const id = Number(e.target.dataset.id); planned = planned.filter(x=>x.id!==id); renderEditableTable(); recompute();
+  }));
+}
+
+// ===== Core Math =====
+function simulate(startingCorpus){
+  const years = [];
+  let corpus = startingCorpus;
+  for(let age = inputs.currentAge; age <= inputs.lifeAge; age++){
+    const reg = regular.reduce((sum, r)=>{
+      const active = age >= r.startAge && age < r.startAge + r.tenure;
+      if(!active) return sum;
+      const yrs = Math.max(0, age - r.startAge);
+      const amt = r.amountToday * Math.pow(1 + r.growth, yrs);
+      return sum + amt;
+    }, 0);
+    const plannedThis = planned.reduce((sum, p)=>{
+      if(age !== p.eventAge) return sum;
+      const yrs = Math.max(0, p.eventAge - inputs.currentAge);
+      const amt = p.amountToday * Math.pow(1 + p.infl, yrs);
+      return sum + amt;
+    }, 0);
+    const total = reg + plannedThis;
+    const totalWithBuffer = total * (1 + inputs.buffer);
+    const ret = corpus * inputs.ret;
+    const end = corpus + ret - totalWithBuffer;
+    years.push({age, reg, planned:plannedThis, total, totalWithBuffer, startCorpus:corpus, ret, endCorpus:end});
+    corpus = end;
+  }
+  return years;
+}
+function goalSeek(targetEnd=0, tol=1){
+  let low = 0, high = 1_00_00_000; // ₹1 cr seed
+  const endFor = (s)=>{ const p = simulate(s); return p[p.length-1].endCorpus; };
+  let eHigh = endFor(high), guard=0; while(eHigh < targetEnd && guard < 40){ high *= 2; eHigh = endFor(high); guard++; }
+  if(eHigh < targetEnd) return NaN;
+  for(let i=0;i<100;i++){
+    const mid = (low+high)/2, e = endFor(mid);
+    if(Math.abs(e-targetEnd) <= tol) return mid;
+    if(e>targetEnd) high = mid; else low = mid;
+  }
+  return (low+high)/2;
+}
+
+// ===== Projection Table (sortable + paginated) =====
+let projSortKey = 'age';
+let projSortAsc = true;
+let page = 1;
+const pageSize = 12;
+let projection = [];
+function renderProjection(){
+  const sorted = [...projection].sort((a,b)=>{
+    const k = projSortKey; const va = a[k], vb = b[k];
+    return projSortAsc ? (va - vb) : (vb - va);
+  });
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  page = Math.min(page, totalPages);
+  const slice = sorted.slice((page-1)*pageSize, page*pageSize);
+  const tb = document.querySelector('#projTable tbody'); tb.innerHTML='';
+  for(const r of slice){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.age}</td>
+      <td class="num">${R(r.reg)}</td>
+      <td class="num">${R(r.planned)}</td>
+      <td class="num">${R(r.total)}</td>
+      <td class="num">${R(r.totalWithBuffer)}</td>
+      <td class="num">${R(r.startCorpus)}</td>
+      <td class="num">${R(r.ret)}</td>
+      <td class="num">${R(r.endCorpus)}</td>`;
+    tb.appendChild(tr);
+  }
+  // Pager
+  const pager = $('pager');
+  pager.innerHTML = '';
+  const btnPrev = document.createElement('button'); btnPrev.textContent = 'Prev'; btnPrev.disabled = page<=1; btnPrev.onclick=()=>{page--; renderProjection();};
+  const btnNext = document.createElement('button'); btnNext.textContent = 'Next'; btnNext.disabled = page>=totalPages; btnNext.onclick=()=>{page++; renderProjection();};
+  const info = document.createElement('div'); info.style.margin='auto 8px'; info.className='small'; info.textContent = `Page ${page} / ${totalPages}`;
+  pager.append(btnPrev, info, btnNext);
+  $('rowCount').textContent = projection.length;
+}
+Array.from(document.querySelectorAll('#projTable thead th.sortable')).forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    if(projSortKey === key){ projSortAsc = !projSortAsc; } else { projSortKey = key; projSortAsc = true; }
+    renderProjection();
+  });
+});
+
+// ===== Chart (canvas) =====
+function drawChart(){
+  const el = $('chart'); const ctx = el.getContext('2d');
+  const w = el.width = el.clientWidth; const h = el.height = el.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  if(!projection.length) return;
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,h-30); ctx.lineTo(w-10,h-30); ctx.stroke();
+  // data scaling
+  const vals = projection.map(p=>p.endCorpus);
+  const minV = Math.min(...vals, 0); const maxV = Math.max(...vals, 1);
+  const x = (i)=> 40 + (w-60) * (i/(projection.length-1));
+  const y = (v)=> {
+    const t = (v - minV) / (maxV - minV || 1); // 0..1
+    return (h-30) - t * (h-50);
+  };
+  // gradient line
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, 'rgba(124,92,255,.9)');
+  grad.addColorStop(1, 'rgba(5,213,255,.9)');
+  ctx.strokeStyle = grad; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  projection.forEach((p,i)=>{ const px=x(i), py=y(p.endCorpus); i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+  ctx.stroke();
+}
+
+// ===== Recompute Pipeline =====
+function recompute(){
+  inputs.currentAge = Number($('currentAge').value);
+  inputs.freedomAge = Number($('freedomAge').value);
+  inputs.lifeAge = Number($('lifeAge').value); $('lifeAgeEcho').textContent = inputs.lifeAge;
+  inputs.inflation = Number($('inflation').value);
+  inputs.ret = Number($('ret').value);
+  inputs.buffer = Number($('buffer').value);
+
+  const annualToday = regular.reduce((s,r)=>{
+    const active = inputs.currentAge >= r.startAge && inputs.currentAge < r.startAge + r.tenure;
+    return s + (active ? r.amountToday : 0);
+  }, 0);
+  $('kpiAnnual').textContent = R(annualToday);
+  $('kpi40x').textContent = R(annualToday * 40);
+
+  const req = goalSeek(0, 1);
+  $('kpiReq').textContent = isFinite(req) ? R(req) : '—';
+
+  projection = simulate(isFinite(req) ? req : 0);
+  $('ending').textContent = R(projection[projection.length-1].endCorpus);
+  $('freeAge').textContent = inputs.freedomAge;
+  const maxCorpus = projection.reduce((m,y)=>Math.max(m, y.endCorpus), -Infinity);
+  $('kpiMax').textContent = R(maxCorpus);
+
+  page = 1; renderProjection(); drawChart();
+}
+
+// ===== Bind top inputs =====
+['currentAge','freedomAge','lifeAge','inflation','ret','buffer'].forEach(id=> $(id).addEventListener('input', recompute));
+$('addReg').addEventListener('click', ()=>{ regular.push({ id: Date.now(), category: 'New Item', amountToday: 0, growth: inputs.inflation, tenure: 10, startAge: inputs.currentAge }); renderEditableTable(); recompute(); });
+$('addPlan').addEventListener('click', ()=>{ planned.push({ id: Date.now(), event: 'New Event', eventAge: inputs.currentAge + 1, amountToday: 0, infl: inputs.inflation }); renderEditableTable(); recompute(); });
+
+// ===== Init =====
+renderEditableTable();
+recompute();
+</script>
+</body>
+</html>
