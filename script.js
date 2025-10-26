@@ -1,6 +1,6 @@
 /* ===========================================================
    FreedomNumber – Calculator Logic (Professional Build)
-   Author: Babu Balasubramanian
+   Ensures default example rows always appear (even if localStorage is empty)
    =========================================================== */
 
 /* ---------- Utilities ---------- */
@@ -20,8 +20,8 @@ const $ = (id) => document.getElementById(id);
 /* ---------- Persistent State ---------- */
 const LS_KEY = "freedomNumberState:v1";
 
-// Inputs (indicative Indian defaults)
-let inputs = {
+// Indicative Indian defaults (used for seeding and Prefill)
+const DEFAULT_INPUTS = {
   currentAge: 40,
   freedomAge: 55,
   lifeAge: 85,
@@ -29,25 +29,26 @@ let inputs = {
   ret: 0.08,       // post-tax annual return
   buffer: 0.15,    // safety buffer on spending
 };
-
-// Regular expenses table
-let regular = [
-  { id: 1, category: "Housing & Utilities",       amountToday: 360000, growth: 0.05, tenure: 45, startAge: 40 },
-  { id: 2, category: "Groceries & Essentials",    amountToday: 240000, growth: 0.06, tenure: 999, startAge: 40 },
-  { id: 3, category: "Transport",                 amountToday: 120000, growth: 0.05, tenure: 999, startAge: 40 },
-  { id: 4, category: "Healthcare & Insurance",    amountToday: 150000, growth: 0.10, tenure: 999, startAge: 40 },
-  { id: 5, category: "Discretionary (Dining/Travel)", amountToday: 180000, growth: 0.07, tenure: 30, startAge: 55 },
-  { id: 6, category: "Parents Support",           amountToday: 120000, growth: 0.06, tenure: 10, startAge: 40 },
-  { id: 7, category: "Children Schooling",        amountToday: 200000, growth: 0.08, tenure: 10, startAge: 40 },
+const DEFAULT_REGULAR = [
+  { id: 1, category: "Housing & Utilities",            amountToday: 360000, growth: 0.05, tenure: 45,  startAge: 40 },
+  { id: 2, category: "Groceries & Essentials",         amountToday: 240000, growth: 0.06, tenure: 999, startAge: 40 },
+  { id: 3, category: "Transport",                      amountToday: 120000, growth: 0.05, tenure: 999, startAge: 40 },
+  { id: 4, category: "Healthcare & Insurance",         amountToday: 150000, growth: 0.10, tenure: 999, startAge: 40 },
+  { id: 5, category: "Discretionary (Dining/Travel)",  amountToday: 180000, growth: 0.07, tenure: 30,  startAge: 55 },
+  { id: 6, category: "Parents Support",                amountToday: 120000, growth: 0.06, tenure: 10,  startAge: 40 },
+  { id: 7, category: "Children Schooling",             amountToday: 200000, growth: 0.08, tenure: 10,  startAge: 40 },
 ];
-
-// Planned / one-time expenses table
-let planned = [
+const DEFAULT_PLANNED = [
   { id: 1, event: "Child Higher Education", eventAge: 45, amountToday: 10000000, infl: 0.06 },
   { id: 2, event: "Home Renovation",        eventAge: 50, amountToday: 2500000,  infl: 0.06 },
   { id: 3, event: "Car Replacement",        eventAge: 60, amountToday: 2000000,  infl: 0.05 },
   { id: 4, event: "Medical Contingency",    eventAge: 70, amountToday: 3000000,  infl: 0.10 },
 ];
+
+// Live state
+let inputs   = { ...DEFAULT_INPUTS };
+let regular  = DEFAULT_REGULAR.map(x => ({ ...x }));
+let planned  = DEFAULT_PLANNED.map(x => ({ ...x }));
 
 function saveState() {
   try {
@@ -70,11 +71,8 @@ function encodeState() {
   return btoa(unescape(encodeURIComponent(JSON.stringify({ inputs, regular, planned }))));
 }
 function decodeState(s) {
-  try {
-    return JSON.parse(decodeURIComponent(escape(atob(s))));
-  } catch (e) {
-    return null;
-  }
+  try { return JSON.parse(decodeURIComponent(escape(atob(s)))); }
+  catch { return null; }
 }
 function maybeLoadFromURL() {
   const u = new URL(location.href);
@@ -82,9 +80,9 @@ function maybeLoadFromURL() {
   if (!s) return;
   const st = decodeState(s);
   if (!st) return;
-  inputs = { ...inputs, ...st.inputs };
-  regular = st.regular || regular;
-  planned = st.planned || planned;
+  inputs  = { ...inputs, ...st.inputs };
+  regular = Array.isArray(st.regular) ? st.regular : regular;
+  planned = Array.isArray(st.planned) ? st.planned : planned;
 }
 function writeShareURL() {
   const qs = new URL(location.href);
@@ -125,14 +123,8 @@ function simulate(startingCorpus) {
     const end = corpus + ret - totalWithBuffer;
 
     years.push({
-      age,
-      reg,
-      planned: plannedThis,
-      total,
-      totalWithBuffer,
-      startCorpus: corpus,
-      ret,
-      endCorpus: end,
+      age, reg, planned: plannedThis, total, totalWithBuffer,
+      startCorpus: corpus, ret, endCorpus: end,
     });
     corpus = end;
   }
@@ -143,13 +135,10 @@ function simulate(startingCorpus) {
 function goalSeek(targetEnd = 0, tol = 1) {
   let low = 0;
   let high = 1_00_00_000; // ₹1 cr starting bracket
-  const endFor = (s) => {
-    const p = simulate(s);
-    return p[p.length - 1].endCorpus;
-  };
-  // Expand high until end >= targetEnd
-  let eHigh = endFor(high);
-  let guard = 0;
+  const endFor = (s) => simulate(s).slice(-1)[0].endCorpus;
+
+  // Expand high until end >= targetEnd (or guard trips)
+  let eHigh = endFor(high), guard = 0;
   while (eHigh < targetEnd && guard < 40) {
     high *= 2;
     eHigh = endFor(high);
@@ -180,13 +169,9 @@ function renderProjection() {
     return projSortAsc ? a[k] - b[k] : b[k] - a[k];
   });
 
-  // Update aria-sort
   document.querySelectorAll("#projTable thead th.sortable").forEach((th) => {
     const key = th.dataset.key;
-    th.setAttribute(
-      "aria-sort",
-      key === projSortKey ? (projSortAsc ? "ascending" : "descending") : "none"
-    );
+    th.setAttribute("aria-sort", key === projSortKey ? (projSortAsc ? "ascending" : "descending") : "none");
   });
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
@@ -212,47 +197,35 @@ function renderProjection() {
     tb.appendChild(tr);
   }
 
-  // Pager
   const pager = $("pager");
   pager.innerHTML = "";
   const btnPrev = document.createElement("button");
   btnPrev.textContent = "Prev";
   btnPrev.disabled = page <= 1;
-  btnPrev.onclick = () => {
-    page--;
-    renderProjection();
-  };
+  btnPrev.onclick = () => { page--; renderProjection(); };
+
   const btnNext = document.createElement("button");
   btnNext.textContent = "Next";
   btnNext.disabled = page >= totalPages;
-  btnNext.onclick = () => {
-    page++;
-    renderProjection();
-  };
+  btnNext.onclick = () => { page++; renderProjection(); };
+
   const info = document.createElement("div");
   info.style.margin = "auto 8px";
   info.className = "small";
   info.textContent = `Page ${page} / ${totalPages}`;
   pager.append(btnPrev, info, btnNext);
 
-  // Row count KPI
   $("rowCount").textContent = projection.length;
 }
 
-// Sorting: click header
-Array.from(document.querySelectorAll("#projTable thead th.sortable")).forEach(
-  (th) => {
-    th.addEventListener("click", () => {
-      const key = th.dataset.key;
-      if (projSortKey === key) projSortAsc = !projSortAsc;
-      else {
-        projSortKey = key;
-        projSortAsc = true;
-      }
-      renderProjection();
-    });
-  }
-);
+Array.from(document.querySelectorAll("#projTable thead th.sortable")).forEach((th) => {
+  th.addEventListener("click", () => {
+    const key = th.dataset.key;
+    if (projSortKey === key) projSortAsc = !projSortAsc;
+    else { projSortKey = key; projSortAsc = true; }
+    renderProjection();
+  });
+});
 
 /* ---------- Editable Tables (Regular & Planned) ---------- */
 function renderEditableTable() {
@@ -287,104 +260,79 @@ function renderEditableTable() {
     ptb.appendChild(tr);
   }
 
-  // Bind inputs (regular)
+  // Bind inputs
   document.querySelectorAll("#regTable input").forEach((inp) => {
-    inp.addEventListener(
-      "input",
-      (e) => {
-        const id = Number(e.target.dataset.id);
-        const k = e.target.dataset.k;
-        const row = regular.find((x) => x.id === id);
-        if (!row) return;
-        row[k] = k === "category" ? e.target.value : Number(e.target.value);
-        saveState();
-        recompute();
-      },
-      { passive: true }
-    );
+    inp.addEventListener("input", (e) => {
+      const id = Number(e.target.dataset.id);
+      const k = e.target.dataset.k;
+      const row = regular.find((x) => x.id === id);
+      if (!row) return;
+      row[k] = k === "category" ? e.target.value : Number(e.target.value);
+      saveState();
+      recompute();
+    }, { passive: true });
   });
 
-  // Bind inputs (planned)
   document.querySelectorAll("#planTable input").forEach((inp) => {
-    inp.addEventListener(
-      "input",
-      (e) => {
-        const id = Number(e.target.dataset.id);
-        const k = e.target.dataset.k;
-        const row = planned.find((x) => x.id === id);
-        if (!row) return;
-        row[k] = k === "event" ? e.target.value : Number(e.target.value);
-        saveState();
-        recompute();
-      },
-      { passive: true }
-    );
+    inp.addEventListener("input", (e) => {
+      const id = Number(e.target.dataset.id);
+      const k = e.target.dataset.k;
+      const row = planned.find((x) => x.id === id);
+      if (!row) return;
+      row[k] = k === "event" ? e.target.value : Number(e.target.value);
+      saveState();
+      recompute();
+    }, { passive: true });
   });
 
-  // Delete buttons
-  document
-    .querySelectorAll('button[data-act="delReg"]')
-    .forEach((btn) =>
-      btn.addEventListener("click", (e) => {
-        const id = Number(e.target.dataset.id);
-        regular = regular.filter((x) => x.id !== id);
-        saveState();
-        renderEditableTable();
-        recompute();
-      })
-    );
-
-  document
-    .querySelectorAll('button[data-act="delPlan"]')
-    .forEach((btn) =>
-      btn.addEventListener("click", (e) => {
-        const id = Number(e.target.dataset.id);
-        planned = planned.filter((x) => x.id !== id);
-        saveState();
-        renderEditableTable();
-        recompute();
-      })
-    );
+  // Delete actions
+  document.querySelectorAll('button[data-act="delReg"]').forEach((btn) =>
+    btn.addEventListener("click", (e) => {
+      const id = Number(e.target.dataset.id);
+      regular = regular.filter((x) => x.id !== id);
+      saveState();
+      renderEditableTable();
+      recompute();
+    })
+  );
+  document.querySelectorAll('button[data-act="delPlan"]').forEach((btn) =>
+    btn.addEventListener("click", (e) => {
+      const id = Number(e.target.dataset.id);
+      planned = planned.filter((x) => x.id !== id);
+      saveState();
+      renderEditableTable();
+      recompute();
+    })
+  );
 }
 
 /* ---------- Recompute Pipeline ---------- */
 function recompute() {
-  // top inputs
   inputs.currentAge = Number($("currentAge").value);
   inputs.freedomAge = Number($("freedomAge").value);
-  inputs.lifeAge = Number($("lifeAge").value);
+  inputs.lifeAge    = Number($("lifeAge").value);
   $("lifeAgeEcho").textContent = inputs.lifeAge;
-  inputs.inflation = Number($("inflation").value);
-  inputs.ret = Number($("ret").value);
-  inputs.buffer = Number($("buffer").value);
+  inputs.inflation  = Number($("inflation").value);
+  inputs.ret        = Number($("ret").value);
+  inputs.buffer     = Number($("buffer").value);
 
   saveState();
 
-  // KPI: annual spend today
   const annualToday = regular.reduce((s, r) => {
-    const active =
-      inputs.currentAge >= r.startAge &&
-      inputs.currentAge < r.startAge + r.tenure;
+    const active = inputs.currentAge >= r.startAge && inputs.currentAge < r.startAge + r.tenure;
     return s + (active ? r.amountToday : 0);
   }, 0);
   $("kpiAnnual").textContent = R(annualToday);
-  $("kpi40x").textContent = R(annualToday * 40);
+  $("kpi40x").textContent    = R(annualToday * 40);
 
-  // Required starting corpus
-  const req = goalSeek(0, 1); // ±₹1 tolerance
+  const req = goalSeek(0, 1);
   $("kpiReq").textContent = isFinite(req) ? R(req) : "—";
 
-  // Build projection
   projection = simulate(isFinite(req) ? req : 0);
 
-  // KPI: max corpus
-  const maxCorpus = projection.reduce(
-    (m, y) => Math.max(m, y.endCorpus),
-    -Infinity
-  );
+  const maxCorpus = projection.reduce((m, y) => Math.max(m, y.endCorpus), -Infinity);
   $("kpiMax").textContent = R(maxCorpus);
 
-  // KPI: implied SWR in first freedom year
   const yFreedom = projection.find((y) => y.age === inputs.freedomAge);
   let swr = NaN;
   if (yFreedom && yFreedom.startCorpus > 0) {
@@ -392,7 +340,6 @@ function recompute() {
   }
   $("kpiSWR").textContent = P(swr);
 
-  // Render table (page 1)
   page = 1;
   renderProjection();
 }
@@ -412,9 +359,7 @@ function closeAudit() {
 }
 $("auditBtn").addEventListener("click", () => openAudit(inputs.freedomAge));
 $("auditClose").addEventListener("click", closeAudit);
-$("auditGo").addEventListener("click", () =>
-  buildAudit(Number(auditAgeInput.value))
-);
+$("auditGo").addEventListener("click", () => buildAudit(Number(auditAgeInput.value)));
 backdrop.addEventListener("click", (e) => {
   if (e.target === backdrop) closeAudit();
 });
@@ -429,81 +374,43 @@ function buildAudit(age) {
     return;
   }
 
-  $("auditSummary").innerHTML = `Age <b>${age}</b> | Start: <b>${R(
-    row.startCorpus
-  )}</b> | Return: <b>${R(row.ret)}</b> | Spend+Buffer: <b>${R(
-    row.totalWithBuffer
-  )}</b> | End: <b>${R(row.endCorpus)}</b>`;
+  $("auditSummary").innerHTML = `Age <b>${age}</b> | Start: <b>${R(row.startCorpus)}</b> | Return: <b>${R(row.ret)}</b> | Spend+Buffer: <b>${R(row.totalWithBuffer)}</b> | End: <b>${R(row.endCorpus)}</b>`;
 
-  // regular breakdown
   const regs = regular
     .map((r) => {
       const active = age >= r.startAge && age < r.startAge + r.tenure;
       if (!active) return null;
       const yrs = age - r.startAge;
       const val = r.amountToday * Math.pow(1 + r.growth, yrs);
-      return `${r.category}: ${R(r.amountToday)} × (1+${
-        (r.growth * 100).toFixed(1)
-      }%)^${yrs} = <b>${R(val)}</b>`;
+      return `${r.category}: ${R(r.amountToday)} × (1+${(r.growth * 100).toFixed(1)}%)^${yrs} = <b>${R(val)}</b>`;
     })
     .filter(Boolean);
-  $("auditRegular").innerHTML = regs.length
-    ? regs.map((x) => `<div>${x}</div>`).join("")
-    : '<div class="small">— none —</div>';
+  $("auditRegular").innerHTML = regs.length ? regs.map((x) => `<div>${x}</div>`).join("") : '<div class="small">— none —</div>';
 
-  // planned breakdown
   const plans = planned
     .map((p) => {
       if (age !== p.eventAge) return null;
       const yrs = p.eventAge - inputs.currentAge;
       const val = p.amountToday * Math.pow(1 + p.infl, yrs);
-      return `${p.event}: ${R(p.amountToday)} × (1+${
-        (p.infl * 100).toFixed(1)
-      }%)^${yrs} = <b>${R(val)}</b>`;
+      return `${p.event}: ${R(p.amountToday)} × (1+${(p.infl * 100).toFixed(1)}%)^${yrs} = <b>${R(val)}</b>`;
     })
     .filter(Boolean);
-  $("auditPlanned").innerHTML = plans.length
-    ? plans.map((x) => `<div>${x}</div>`).join("")
-    : '<div class="small">— none —</div>';
+  $("auditPlanned").innerHTML = plans.length ? plans.map((x) => `<div>${x}</div>`).join("") : '<div class="small">— none —</div>';
 
-  // aggregation
   $("auditAgg").innerHTML = [
-    `total = regular + planned = ${R(row.reg)} + ${R(row.planned)} = <b>${R(
-      row.total
-    )}</b>`,
-    `totalWithBuffer = total × (1 + buffer) = ${R(row.total)} × ${
-      (inputs.buffer * 100).toFixed(1)
-    }% = <b>${R(row.totalWithBuffer)}</b>`,
-    `return = startCorpus × returnRate = ${R(row.startCorpus)} × ${
-      (inputs.ret * 100).toFixed(1)
-    }% = <b>${R(row.ret)}</b>`,
-    `endCorpus = startCorpus + return − totalWithBuffer = ${R(
-      row.startCorpus
-    )} + ${R(row.ret)} − ${R(row.totalWithBuffer)} = <b>${R(
-      row.endCorpus
-    )}</b>`,
-  ]
-    .map((x) => `<div>${x}</div>`)
-    .join("");
+    `total = regular + planned = ${R(row.reg)} + ${R(row.planned)} = <b>${R(row.total)}</b>`,
+    `totalWithBuffer = total × (1 + buffer) = ${R(row.total)} × ${(inputs.buffer * 100).toFixed(1)}% = <b>${R(row.totalWithBuffer)}</b>`,
+    `return = startCorpus × returnRate = ${R(row.startCorpus)} × ${(inputs.ret * 100).toFixed(1)}% = <b>${R(row.ret)}</b>`,
+    `endCorpus = startCorpus + return − totalWithBuffer = ${R(row.startCorpus)} + ${R(row.ret)} − ${R(row.totalWithBuffer)} = <b>${R(row.endCorpus)}</b>`,
+  ].map((x) => `<div>${x}</div>`).join("");
 }
 
 /* ---------- Exports & Buttons ---------- */
 $("exportBtn").addEventListener("click", () => {
-  const rows = [
-    "Age,Regular,Planned,Total,Buffer,StartCorpus,Return,EndCorpus",
-  ];
+  const rows = ["Age,Regular,Planned,Total,Buffer,StartCorpus,Return,EndCorpus"];
   rows.push(
     ...projection.map((r) =>
-      [
-        r.age,
-        r.reg,
-        r.planned,
-        r.total,
-        r.totalWithBuffer,
-        r.startCorpus,
-        r.ret,
-        r.endCorpus,
-      ].join(",")
+      [r.age, r.reg, r.planned, r.total, r.totalWithBuffer, r.startCorpus, r.ret, r.endCorpus].join(",")
     )
   );
   const blob = new Blob([rows.join("\n")], { type: "text/csv" });
@@ -522,36 +429,17 @@ $("resetBtn")?.addEventListener("click", () => {
 });
 
 $("loadIndicative")?.addEventListener("click", () => {
-  inputs = {
-    currentAge: 40,
-    freedomAge: 55,
-    lifeAge: 85,
-    inflation: 0.06,
-    ret: 0.08,
-    buffer: 0.15,
-  };
-  regular = [
-    { id: 1, category: "Housing & Utilities",       amountToday: 360000, growth: 0.05, tenure: 45, startAge: 40 },
-    { id: 2, category: "Groceries & Essentials",    amountToday: 240000, growth: 0.06, tenure: 999, startAge: 40 },
-    { id: 3, category: "Transport",                 amountToday: 120000, growth: 0.05, tenure: 999, startAge: 40 },
-    { id: 4, category: "Healthcare & Insurance",    amountToday: 150000, growth: 0.10, tenure: 999, startAge: 40 },
-    { id: 5, category: "Discretionary (Dining/Travel)", amountToday: 180000, growth: 0.07, tenure: 30, startAge: 55 },
-    { id: 6, category: "Parents Support",           amountToday: 120000, growth: 0.06, tenure: 10, startAge: 40 },
-    { id: 7, category: "Children Schooling",        amountToday: 200000, growth: 0.08, tenure: 10, startAge: 40 },
-  ];
-  planned = [
-    { id: 1, event: "Child Higher Education", eventAge: 45, amountToday: 10000000, infl: 0.06 },
-    { id: 2, event: "Home Renovation",        eventAge: 50, amountToday: 2500000,  infl: 0.06 },
-    { id: 3, event: "Car Replacement",        eventAge: 60, amountToday: 2000000,  infl: 0.05 },
-    { id: 4, event: "Medical Contingency",    eventAge: 70, amountToday: 3000000,  infl: 0.10 },
-  ];
-  // Push values to inputs
+  inputs  = { ...DEFAULT_INPUTS };
+  regular = DEFAULT_REGULAR.map(x => ({ ...x }));
+  planned = DEFAULT_PLANNED.map(x => ({ ...x }));
+
   $("currentAge").value = inputs.currentAge;
   $("freedomAge").value = inputs.freedomAge;
-  $("lifeAge").value = inputs.lifeAge;
-  $("inflation").value = inputs.inflation;
-  $("ret").value = inputs.ret;
-  $("buffer").value = inputs.buffer;
+  $("lifeAge").value    = inputs.lifeAge;
+  $("inflation").value  = inputs.inflation;
+  $("ret").value        = inputs.ret;
+  $("buffer").value     = inputs.buffer;
+
   renderEditableTable();
   recompute();
   saveState();
@@ -559,18 +447,25 @@ $("loadIndicative")?.addEventListener("click", () => {
 
 /* ---------- Init ---------- */
 (function init() {
-  // Maybe load from ?s=
+  // Load from URL (if any), then from localStorage
   maybeLoadFromURL();
-  // Load from localStorage
   loadState();
 
-  // Ensure inputs are reflected in UI
+  // IMPORTANT: Seed defaults if tables are empty (e.g., old saved empty state)
+  if (!Array.isArray(regular) || regular.length === 0) {
+    regular = DEFAULT_REGULAR.map(x => ({ ...x }));
+  }
+  if (!Array.isArray(planned) || planned.length === 0) {
+    planned = DEFAULT_PLANNED.map(x => ({ ...x }));
+  }
+
+  // Push inputs into UI
   $("currentAge").value = inputs.currentAge;
   $("freedomAge").value = inputs.freedomAge;
-  $("lifeAge").value = inputs.lifeAge;
-  $("inflation").value = inputs.inflation;
-  $("ret").value = inputs.ret;
-  $("buffer").value = inputs.buffer;
+  $("lifeAge").value    = inputs.lifeAge;
+  $("inflation").value  = inputs.inflation;
+  $("ret").value        = inputs.ret;
+  $("buffer").value     = inputs.buffer;
 
   // Bind top inputs
   ["currentAge", "freedomAge", "lifeAge", "inflation", "ret", "buffer"].forEach(
@@ -605,7 +500,7 @@ $("loadIndicative")?.addEventListener("click", () => {
     recompute();
   });
 
-  // Render editable tables & compute first time
+  // Render tables & compute
   renderEditableTable();
   recompute();
 })();
