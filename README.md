@@ -50,7 +50,7 @@ It’s simple, beautiful, and fully in-browser — no Excel, no formulas, no log
 
 ## 🛠️ How to use
 
-1. Open the live site → [https://yourusername.github.io/FreedomNumber](https://babubl.github.io/FreedomNumber)
+1. Open the live site → [https://babubl.github.io/FreedomNumber](https://babubl.github.io/FreedomNumber)
 2. Enter:
    - Your current age, desired freedom age, and life expectancy
    - Expected inflation, return, and safety buffer
