@@ -1,13 +1,17 @@
 /* ===========================================================
-   FreedomNumber — script.js
-   - Buttons fixed (no accidental form submit)
-   - Existing rows become editable on load
-   - Add Item / Add Event append editable rows
-   - Auto-compute Key Metrics + table
+   FreedomNumber — script.js (robust init + button fixes)
+   - Binds even if DOMContentLoaded already fired
+   - Add Item / Add Event work and stay editable
+   - Stress toggle + longevity presets fixed
+   - Live KPIs + table recompute on any change
    =========================================================== */
 
 (function () {
   "use strict";
+
+  // --- Tiny marker so you can confirm load in DevTools ---
+  // (F12 → Console should show this once)
+  try { console.log("[FreedomNumber] script loaded"); } catch {}
 
   // ---------- Helpers ----------
   const $  = (id)  => document.getElementById(id);
@@ -26,25 +30,23 @@
   function getTables() {
     const regs = qa("#regTable tbody tr").map(tr => {
       const td = tr.querySelectorAll("td");
-      const o = {
+      return {
         name:  tr.querySelector("input[data-field='name']")?.value ?? (td[0]?.textContent.trim() || "Item"),
         amount:+(tr.querySelector("input[data-field='amount']")?.value ?? cleanNum(td[1]?.textContent || "")),
         growth:+(tr.querySelector("input[data-field='growth']")?.value ?? parseFloat(td[2]?.textContent || "0") || 0),
         tenure:+(tr.querySelector("input[data-field='tenure']")?.value ?? parseFloat(td[3]?.textContent || "0") || 0),
         start: +(tr.querySelector("input[data-field='start']")?.value ?? parseFloat(td[4]?.textContent || "0") || 0),
       };
-      return o;
     });
 
     const plans = qa("#planTable tbody tr").map(tr => {
       const td = tr.querySelectorAll("td");
-      const o = {
+      return {
         name:  tr.querySelector("input[data-field='name']")?.value ?? (td[0]?.textContent.trim() || "Event"),
         event: +(tr.querySelector("input[data-field='event']")?.value ?? parseFloat(td[1]?.textContent || "0") || 0),
         amount:+(tr.querySelector("input[data-field='amount']")?.value ?? cleanNum(td[2]?.textContent || "")),
         infl:  +(tr.querySelector("input[data-field='infl']")?.value ?? parseFloat(td[3]?.textContent || "0") || 0),
       };
-      return o;
     });
 
     return { regs, plans };
@@ -83,12 +85,12 @@
       planBody.appendChild(tr);
     });
 
-    // Live recompute on edits
+    // Recompute on edits
     qa("#regTable input, #planTable input").forEach(inp => {
       inp.addEventListener("input", recompute, { passive: true });
     });
 
-    // Row deletes via delegation (one handler per tbody)
+    // Delegate deletes
     regBody.onclick = (e) => {
       const btn = e.target.closest("button[data-action='del-reg']");
       if (!btn) return;
@@ -98,7 +100,6 @@
       renderTablesEditable(state.regs, state.plans);
       recompute();
     };
-
     planBody.onclick = (e) => {
       const btn = e.target.closest("button[data-action='del-plan']");
       if (!btn) return;
@@ -110,7 +111,7 @@
     };
   }
 
-  // ---------- Bootstrap: convert initial static rows to inputs (once) ----------
+  // ---------- Bootstrap: convert default static rows to inputs ----------
   function bootstrapTablesFromDOM() {
     const alreadyEditable = !!q("#regTable tbody input") || !!q("#planTable tbody input");
     if (alreadyEditable) return;
@@ -162,14 +163,14 @@
     }
 
     for (let age = freedomAge; age <= lifeAge; age++) {
-      // Regular spend at age (respect start & tenure)
+      // Regular
       const regSum = regs.reduce((s, r) => {
         const active = age >= r.start && age < r.start + r.tenure;
         if (!active) return s;
         return s + r.amount * Math.pow(1 + r.growth, age - r.start);
       }, 0);
 
-      // Planned spend if event hits this age
+      // Planned
       const planSum = plans.reduce((s, p) => {
         if (age !== p.event) return s;
         const yrs = Math.max(0, age - currentAge);
@@ -188,7 +189,7 @@
       }
 
       const retAmt = corpus * rEff;
-      const spendAfterIncome = Math.max(0, totalWithBuffer - annualRetirementIncome); // policy: income deducted after buffer
+      const spendAfterIncome = Math.max(0, totalWithBuffer - annualRetirementIncome); // income deducted after buffer
       const endCorpus = corpus + retAmt - spendAfterIncome;
 
       proj.push({
@@ -257,7 +258,7 @@
     setText("kpiAnnual",        money(annualToday));
     setText("kpi40x",           money(rule40));
     setText("kpiCorpusFreedom", money(first.startCorpus));
-    setText("kpiSpendYear1",    money(year1Spend)); // shown if you added this KPI in HTML
+    setText("kpiSpendYear1",    money(year1Spend));
     setText("kpiSWR",           pct(swr));
     setText("kpiMax",           money(maxCorpus));
     setText("rowCount",         String(proj.length));
@@ -273,7 +274,6 @@
     setText("kpiSurplus", end >= 0 ? `Surplus ${money(end)}` : `Shortfall ${money(Math.abs(end))}`);
     setText("kpiReq", money(gap));
 
-    // Badge + summary banner
     const badge = $("#kpiStatus");
     const banner = $("#summaryBanner");
     if (badge) badge.classList.remove("badge--ok", "badge--risk", "badge--neutral");
@@ -292,7 +292,6 @@
       if (banner) banner.textContent = `Your plan balances near ₹0 at age ${inputs.lifeAge}.`;
     }
 
-    // Narrative (plain English)
     const band = !isFinite(swr) ? "—" : (swr <= 0.04 ? "conservative" : (swr <= 0.06 ? "reasonable" : "aggressive"));
     const narrative =
       `At age ${inputs.freedomAge}, corpus is ${money(first.startCorpus)}. ` +
@@ -334,8 +333,10 @@
     } catch {}
   }
 
-  // ---------- Init ----------
+  // ---------- Init (robust) ----------
   function init() {
+    try { console.log("[FreedomNumber] init start"); } catch {}
+
     // 1) Convert default static rows to editable inputs (once)
     bootstrapTablesFromDOM();
 
@@ -345,7 +346,7 @@
       inp.addEventListener("input", recompute, { passive: true });
     });
 
-    // 3) Stress toggle buttons
+    // 3) Stress toggle
     const on  = $("#stressOn");
     const off = $("#stressOff");
     if (on && off) {
@@ -396,7 +397,14 @@
 
     // 7) First compute
     recompute();
+
+    try { console.log("[FreedomNumber] init complete"); } catch {}
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  // Run now if DOM is ready; otherwise wait for DOMContentLoaded
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
 })();
