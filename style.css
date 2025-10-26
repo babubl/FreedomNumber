@@ -1,0 +1,278 @@
+/* ===========================================================
+   FreedomNumber – Professional Indian Financial Styling
+   Author: Babu Balasubramanian
+   =========================================================== */
+
+:root {
+  --bg: #0b132b;
+  --surface: #111d4a;
+  --card: #162250;
+  --ink: #f5f6fa;
+  --muted: #aab4d4;
+  --line: #253163;
+  --brand: #ff6a00;    /* saffron accent */
+  --brand-2: #138808;  /* India green accent */
+  --focus: #3b82f6;
+  --radius: 10px;
+  --transition: 0.2s ease;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono";
+}
+
+/* ---------- Global ---------- */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1100px;
+  margin: auto;
+  padding: 24px;
+}
+
+a { color: var(--brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- Navigation ---------- */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 24px;
+}
+.nav__brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.nav__flag {
+  width: 16px; height: 16px; border-radius: 2px;
+  background: linear-gradient(180deg,#ff9933 0 33%,#fff 33% 66%,#138808 66% 100%);
+  border: 1px solid rgba(255,255,255,.15);
+}
+.nav__links a {
+  color: var(--muted);
+  font-size: 14px;
+  margin-left: 16px;
+  transition: color var(--transition);
+}
+.nav__links a:hover { color: var(--ink); }
+
+/* ---------- Hero ---------- */
+.hero {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px 24px;
+  text-align: left;
+  margin-top: 24px;
+}
+.eyebrow {
+  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 6px 0 10px;
+}
+.subtitle {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 900px;
+}
+.actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  border-radius: var(--radius);
+  font-size: 14px;
+  padding: 10px 16px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  transition: background var(--transition), color var(--transition);
+}
+.btn--primary {
+  background: var(--brand);
+  color: #10131f;
+  border-color: #e55f00;
+  font-weight: 700;
+}
+.btn--secondary {
+  background: #19295e;
+  color: var(--ink);
+}
+.btn--link {
+  background: transparent;
+  color: var(--ink);
+  border-color: transparent;
+  padding: 10px 6px;
+}
+.btn:hover { filter: brightness(1.05); }
+.btn:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Cards & Sections ---------- */
+.section { margin: 32px 0; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.card__tools { display: flex; gap: 8px; }
+
+/* ---------- Grids ---------- */
+.grid { display: grid; gap: 16px; }
+@media(min-width: 960px) {
+  .grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* ---------- Inputs ---------- */
+label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+input {
+  width: 100%;
+  background: #0b183f;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 14px;
+}
+input:focus {
+  outline: 2px solid var(--focus);
+  border-color: transparent;
+}
+.help { font-size: 11px; color: var(--muted); }
+
+/* ---------- KPIs ---------- */
+.kpi {
+  background: #0b183f;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.kpi__t { font-size: 12px; color: var(--muted); }
+.kpi__v { font-size: 18px; font-weight: 700; }
+
+/* ---------- Tables ---------- */
+.table-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #0b183f;
+}
+table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+thead th {
+  position: sticky; top: 0;
+  background: #12275e;
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+}
+tbody td {
+  padding: 10px;
+  border-top: 1px solid var(--line);
+}
+tbody tr:hover { background: rgba(255,255,255,0.05); }
+.num { text-align: right; }
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px;
+}
+.pager button {
+  background: #12275e;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+}
+.modal {
+  width: min(880px,96vw);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.modal__head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.modal__tools {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+.audit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+.audit-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #0b183f;
+  padding: 10px;
+}
+.mono { font-family: var(--font-mono); font-size: 12px; }
+.small { font-size: 12px; color: var(--muted); }
+
+/* ---------- Footer ---------- */
+.footer {
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+.footer__inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+}
+
+/* ---------- Print ---------- */
+@media print {
+  .nav, .actions, .pager, .footer { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card { border: none; }
+}
