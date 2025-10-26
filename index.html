@@ -12,14 +12,13 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://babubl.github.io/FreedomNumber/" />
   <meta property="og:image" content="assets/cover.png" />
-  <link rel="stylesheet" href="style.css?v=1" />
-  <script defer src="script.js?v=1"></script>
+  <link rel="stylesheet" href="style.css?v=2" />
+  <script defer src="script.js?v=3"></script>
 </head>
 <body>
   <!-- Top Navigation -->
   <header class="nav" role="banner">
     <div class="nav__brand">
-      <span class="nav__flag" aria-hidden="true"></span>
       <span class="nav__name">FreedomNumber</span>
     </div>
     <nav class="nav__links" aria-label="Primary">
@@ -35,7 +34,7 @@
       <p class="eyebrow">India-focused</p>
       <h1 class="title">Retirement Corpus Calculator</h1>
       <p class="subtitle">
-        Plan with Indian inflation, post-tax returns and real-life milestones. Edit assumptions, review annual projections,
+        Plan with Indian inflation, post-tax returns, and real-life milestones. Edit assumptions, review per-year projections,
         export to CSV, and audit every calculation.
       </p>
       <div class="actions">
@@ -48,7 +47,7 @@
     <section id="method" class="section card" aria-label="Methodology & Assumptions">
       <h2>Methodology & Assumptions</h2>
       <p class="small">
-        The U.S. “4% rule” (Bengen, 1994) assumes ~3% inflation, ~50/50 stock–bond mix, ~7–8% nominal returns and a ~30-year horizon,
+        The U.S. “4% rule” (Bengen, 1994) assumes ~3% inflation, ~50/50 stock–bond mix, ~7–8% nominal returns, and a ~30-year horizon,
         before taxes and fees. Indian households typically face higher inflation, tax drag and longer horizons. This model projects
         cash flows year-by-year with line-item expenses and a safety buffer, then goal-seeks the starting corpus such that ending
         corpus ≈ ₹0 at life expectancy.
@@ -96,6 +95,7 @@
           </div>
           <p class="small">Defaults reflect an indicative urban household. Adjust to your context.</p>
 
+          <!-- Core inputs -->
           <div class="grid cols-2 form-grid">
             <div>
               <label for="currentAge">Current Age</label>
@@ -123,6 +123,59 @@
               <label for="buffer">Safety Buffer on Spend</label>
               <input id="buffer" type="number" inputmode="decimal" step="0.001" value="0.15" />
               <span class="help">Applied to each year’s total spend</span>
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--line);margin:16px 0" />
+
+          <!-- Enhancements: corpus, SIP, income, TER, tax, longevity, stress -->
+          <div class="grid cols-2 form-grid">
+            <div>
+              <label for="currentCorpus">Current Investable Corpus (₹)</label>
+              <input id="currentCorpus" type="number" inputmode="decimal" value="2000000" />
+              <span class="help">Liquid/investable assets today</span>
+            </div>
+            <div>
+              <label for="monthlySIP">Monthly SIP till Freedom Age (₹)</label>
+              <input id="monthlySIP" type="number" inputmode="decimal" value="30000" />
+              <span class="help">Continues until freedom age</span>
+            </div>
+            <div>
+              <label for="annualRetirementIncome">Annual Income in Retirement (₹)</label>
+              <input id="annualRetirementIncome" type="number" inputmode="decimal" value="240000" />
+              <span class="help">Pension, rent, annuity, etc.</span>
+            </div>
+            <div>
+              <label for="ter">Portfolio Expense Ratio (TER)</label>
+              <input id="ter" type="number" inputmode="decimal" step="0.001" value="0.0075" />
+              <span class="help">0.0075 = 0.75% p.a. haircut to returns</span>
+            </div>
+          </div>
+
+          <div class="grid cols-3" style="margin-top:8px">
+            <div>
+              <label><b>Longevity Preset</b></label>
+              <div class="actions" style="gap:8px">
+                <button class="btn btn--secondary" id="life85">85</button>
+                <button class="btn btn--secondary" id="life90">90</button>
+                <button class="btn btn--secondary" id="life95">95</button>
+              </div>
+            </div>
+            <div>
+              <label for="taxRegime"><b>Tax Regime</b></label>
+              <div class="actions" style="gap:8px">
+                <button class="btn btn--secondary" id="taxOld">Old</button>
+                <button class="btn btn--secondary" id="taxNew">New</button>
+              </div>
+              <span class="small">Used for indicative post-tax return modelling (later step)</span>
+            </div>
+            <div>
+              <label><b>Stress Test</b></label>
+              <div class="actions" style="gap:8px">
+                <button class="btn btn--secondary" id="stressOff">Off</button>
+                <button class="btn btn--secondary" id="stressOn">Bear Decade</button>
+              </div>
+              <span class="small">Illustrative −2% real in first 10 years (wired in next update)</span>
             </div>
           </div>
         </div>
