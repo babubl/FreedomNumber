@@ -12,8 +12,8 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://babubl.github.io/FreedomNumber/" />
   <meta property="og:image" content="assets/cover.png" />
-  <link rel="stylesheet" href="style.css?v=4" />
-  <script defer src="script.js?v=6"></script>
+  <link rel="stylesheet" href="style.css?v=5" />
+  <script defer src="script.js?v=7"></script>
 </head>
 <body>
   <!-- Top Navigation -->
@@ -179,37 +179,70 @@
           </div>
         </div>
 
-        <!-- Key Metrics -->
+        <!-- Key Metrics (improved copy & missing elements added) -->
         <div class="card" id="kpiLive" role="status" aria-live="polite">
-          <h2>Key Metrics</h2>
+          <div class="card__head">
+            <h2>Key Metrics</h2>
+            <span id="kpiStatus" class="badge badge--neutral">Balanced</span>
+          </div>
+
+          <!-- Row 1 -->
           <div class="grid cols-3 kpi-grid">
             <div class="kpi">
-              <div class="kpi__t">Annual Spend Today (Active)</div>
+              <div class="kpi__t">Annual Spend Today</div>
               <div class="kpi__v" id="kpiAnnual">—</div>
+              <div class="kpi__sub">Current yearly spend from active expense items.</div>
             </div>
             <div class="kpi">
-              <div class="kpi__t">Rule-of-Thumb (40×)</div>
+              <div class="kpi__t">Rule of Thumb (40×)</div>
               <div class="kpi__v" id="kpi40x">—</div>
+              <div class="kpi__sub">Simple 4% proxy for context (U.S.-style).</div>
             </div>
             <div class="kpi">
-              <div class="kpi__t">Additional Lump Sum Needed (Today)</div>
-              <div class="kpi__v" id="kpiReq">—</div>
+              <div class="kpi__t">Corpus @ Freedom Age</div>
+              <div class="kpi__v" id="kpiCorpusFreedom">—</div>
+              <div class="kpi__sub">Projected corpus at age <span id="freedomEcho">55</span> with today’s corpus + SIP growth.</div>
             </div>
           </div>
+
+          <!-- Row 2 -->
           <div class="grid cols-3 kpi-grid">
             <div class="kpi">
-              <div class="kpi__t">Max Corpus During Plan</div>
-              <div class="kpi__v" id="kpiMax">—</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi__t">Implied SWR in Year-1*</div>
+              <div class="kpi__t">Year-1 Withdrawal %</div>
               <div class="kpi__v" id="kpiSWR">—</div>
+              <div class="kpi__sub">Spend (incl. buffer) ÷ corpus at freedom. Lower % is safer.</div>
             </div>
             <div class="kpi" id="kpiSurplusWrap">
-              <div class="kpi__t">Surplus / Shortfall at Life Expectancy</div>
+              <div class="kpi__t">Surplus / Shortfall @ Life</div>
               <div class="kpi__v" id="kpiSurplus">—</div>
+              <div class="kpi__sub">Projected amount left (or lacking) at age <span id="lifeAgeEcho">85</span>.</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__t">Additional Lump Sum (Today)</div>
+              <div class="kpi__v" id="kpiReq">—</div>
+              <div class="kpi__sub">Extra you’d need to add now. ₹0 = already funded.</div>
             </div>
           </div>
+
+          <!-- Row 3 (compact) -->
+          <div class="grid cols-3 kpi-grid">
+            <div class="kpi">
+              <div class="kpi__t">Peak Corpus</div>
+              <div class="kpi__v" id="kpiMax">—</div>
+              <div class="kpi__sub">Highest level reached during the plan.</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__t">Years Projected</div>
+              <div class="kpi__v" id="rowCount">—</div>
+              <div class="kpi__sub">Total rows in the projection.</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi__t">What this means</div>
+              <div class="kpi__v" id="kpiNarrative">—</div>
+              <div class="kpi__sub">Plain-English one-liner.</div>
+            </div>
+          </div>
+
           <p class="small">*At Freedom Age: (Spend + Buffer) ÷ Starting Corpus for that year.</p>
         </div>
       </div>
@@ -234,7 +267,49 @@
                   <th scope="col">Action</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody>
+                <!-- Default, editable rows so users see results immediately -->
+                <tr>
+                  <td>Household & Utilities</td>
+                  <td class="num">360000</td>
+                  <td class="num">0.06</td>
+                  <td class="num">45</td>
+                  <td class="num">40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Groceries & Essentials</td>
+                  <td class="num">240000</td>
+                  <td class="num">0.06</td>
+                  <td class="num">45</td>
+                  <td class="num">40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Healthcare & Insurance</td>
+                  <td class="num">150000</td>
+                  <td class="num">0.10</td>
+                  <td class="num">45</td>
+                  <td class="num">40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Transport</td>
+                  <td class="num">120000</td>
+                  <td class="num">0.05</td>
+                  <td class="num">45</td>
+                  <td class="num">40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Discretionary</td>
+                  <td class="num">180000</td>
+                  <td class="num">0.07</td>
+                  <td class="num">30</td>
+                  <td class="num">55</td>
+                  <td></td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -256,7 +331,23 @@
                   <th scope="col">Action</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody>
+                <!-- Default, editable rows -->
+                <tr>
+                  <td>Child Higher Education</td>
+                  <td class="num">50</td>
+                  <td class="num">1000000</td>
+                  <td class="num">0.06</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Home Renovation</td>
+                  <td class="num">60</td>
+                  <td class="num">800000</td>
+                  <td class="num">0.05</td>
+                  <td></td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
