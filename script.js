@@ -1,6 +1,7 @@
 /* ===========================================================
-   FreedomNumber – Calculator Logic (Professional Build)
-   Ensures default example rows always appear (even if localStorage is empty)
+   FreedomNumber – Calculator Logic (Pro Build, India)
+   Adds: current corpus, monthly SIP (pre-freedom), retirement income,
+         TER haircut, longevity presets, tax regime, stress test.
    =========================================================== */
 
 /* ---------- Utilities ---------- */
@@ -18,17 +19,24 @@ const P = (n) => (isFinite(n) ? pct.format(n) : "—");
 const $ = (id) => document.getElementById(id);
 
 /* ---------- Persistent State ---------- */
-const LS_KEY = "freedomNumberState:v1";
+const LS_KEY = "freedomNumberState:v2"; // bump version to avoid old cache
 
 // Indicative Indian defaults (used for seeding and Prefill)
 const DEFAULT_INPUTS = {
   currentAge: 40,
   freedomAge: 55,
   lifeAge: 85,
-  inflation: 0.06, // default growth when adding new rows
-  ret: 0.08,       // post-tax annual return
-  buffer: 0.15,    // safety buffer on spending
+  inflation: 0.06,  // used also as default row growth
+  ret: 0.08,        // nominal post-tax return BEFORE TER
+  buffer: 0.15,     // safety buffer on spending
+  currentCorpus: 2000000,         // ₹
+  monthlySIP: 30000,              // ₹ until freedom age (inclusive start, exclusive end)
+  annualRetirementIncome: 240000, // ₹ after freedom age
+  ter: 0.0075,                    // 0.75% p.a. haircut on return
+  taxRegime: "new",               // "old" | "new" (placeholder for future tax logic)
+  stress: "off",                  // "off" | "bear"
 };
+
 const DEFAULT_REGULAR = [
   { id: 1, category: "Housing & Utilities",            amountToday: 360000, growth: 0.05, tenure: 45,  startAge: 40 },
   { id: 2, category: "Groceries & Essentials",         amountToday: 240000, growth: 0.06, tenure: 999, startAge: 40 },
@@ -38,6 +46,7 @@ const DEFAULT_REGULAR = [
   { id: 6, category: "Parents Support",                amountToday: 120000, growth: 0.06, tenure: 10,  startAge: 40 },
   { id: 7, category: "Children Schooling",             amountToday: 200000, growth: 0.08, tenure: 10,  startAge: 40 },
 ];
+
 const DEFAULT_PLANNED = [
   { id: 1, event: "Child Higher Education", eventAge: 45, amountToday: 10000000, infl: 0.06 },
   { id: 2, event: "Home Renovation",        eventAge: 50, amountToday: 2500000,  infl: 0.06 },
@@ -60,7 +69,7 @@ function loadState() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return;
     const s = JSON.parse(raw);
-    if (s.inputs) inputs = { ...inputs, ...s.inputs };
+    if (s.inputs) inputs = { ...DEFAULT_INPUTS, ...s.inputs };
     if (Array.isArray(s.regular)) regular = s.regular;
     if (Array.isArray(s.planned)) planned = s.planned;
   } catch (e) {}
@@ -80,7 +89,7 @@ function maybeLoadFromURL() {
   if (!s) return;
   const st = decodeState(s);
   if (!st) return;
-  inputs  = { ...inputs, ...st.inputs };
+  inputs  = { ...DEFAULT_INPUTS, ...st.inputs };
   regular = Array.isArray(st.regular) ? st.regular : regular;
   planned = Array.isArray(st.planned) ? st.planned : planned;
 }
@@ -96,12 +105,35 @@ function writeShareURL() {
   }
 }
 
+/* ---------- Return engine (with TER + optional stress) ---------- */
+function effectiveNominalReturn(age) {
+  // Base effective nominal = user nominal post-tax minus TER
+  let r = inputs.ret - inputs.ter; // could be < 0 in extreme cases; allowed
+  // Stress: first 10 years AFTER freedom age → reduce REAL return by 2% (−0.02)
+  if (inputs.stress === "bear" && age >= inputs.freedomAge && age < inputs.freedomAge + 10) {
+    const realBase = (1 + r) / (1 + inputs.inflation) - 1;    // convert to real
+    const realStressed = realBase - 0.02;                     // −2% real
+    r = (1 + realStressed) * (1 + inputs.inflation) - 1;      // back to nominal
+  }
+  return r;
+}
+
 /* ---------- Core Math ---------- */
-function simulate(startingCorpus) {
+/**
+ * simulate(startingLumpSumToday)
+ * startingLumpSumToday: the EXTRA lump sum provided today (over and above currentCorpus)
+ * Engine also adds monthly SIP (annualised) before freedom age.
+ */
+function simulate(startingLumpSumToday) {
   const years = [];
-  let corpus = startingCorpus;
+  let corpus = startingLumpSumToday + inputs.currentCorpus; // start with user corpus + extra
 
   for (let age = inputs.currentAge; age <= inputs.lifeAge; age++) {
+    // Contributions before freedom age
+    const sipAnnual = age < inputs.freedomAge ? inputs.monthlySIP * 12 : 0;
+    corpus += sipAnnual; // assume start-of-year contribution for simplicity
+
+    // Regular spend for this age
     const reg = regular.reduce((sum, r) => {
       const active = age >= r.startAge && age < r.startAge + r.tenure;
       if (!active) return sum;
@@ -110,6 +142,7 @@ function simulate(startingCorpus) {
       return sum + amt;
     }, 0);
 
+    // Planned events in this age
     const plannedThis = planned.reduce((sum, p) => {
       if (age !== p.eventAge) return sum;
       const yrs = Math.max(0, p.eventAge - inputs.currentAge);
@@ -117,27 +150,47 @@ function simulate(startingCorpus) {
       return sum + amt;
     }, 0);
 
+    // Spend + buffer
     const total = reg + plannedThis;
-    const totalWithBuffer = total * (1 + inputs.buffer);
-    const ret = corpus * inputs.ret;
+    let totalWithBuffer = total * (1 + inputs.buffer);
+
+    // Retirement income offset (post-freedom)
+    if (age >= inputs.freedomAge && inputs.annualRetirementIncome > 0) {
+      totalWithBuffer = Math.max(0, totalWithBuffer - inputs.annualRetirementIncome);
+    }
+
+    // Return
+    const rEff = effectiveNominalReturn(age);
+    const ret = corpus * rEff;
+
+    // End corpus
     const end = corpus + ret - totalWithBuffer;
 
     years.push({
-      age, reg, planned: plannedThis, total, totalWithBuffer,
-      startCorpus: corpus, ret, endCorpus: end,
+      age,
+      reg,
+      planned: plannedThis,
+      total,
+      totalWithBuffer,
+      startCorpus: corpus,
+      contrib: sipAnnual,
+      ret,
+      endCorpus: end,
     });
+
     corpus = end;
   }
+
   return years;
 }
 
-// Bisection goal-seek to make end corpus ~ 0 at lifeAge
+// Goal-seek to find EXTRA lump sum needed today so that end corpus ~ 0
 function goalSeek(targetEnd = 0, tol = 1) {
   let low = 0;
-  let high = 1_00_00_000; // ₹1 cr starting bracket
+  let high = 1_00_00_000; // ₹1 cr bracket
   const endFor = (s) => simulate(s).slice(-1)[0].endCorpus;
 
-  // Expand high until end >= targetEnd (or guard trips)
+  // Expand high upward until enough
   let eHigh = endFor(high), guard = 0;
   while (eHigh < targetEnd && guard < 40) {
     high *= 2;
@@ -169,9 +222,13 @@ function renderProjection() {
     return projSortAsc ? a[k] - b[k] : b[k] - a[k];
   });
 
+  // Update aria-sort
   document.querySelectorAll("#projTable thead th.sortable").forEach((th) => {
     const key = th.dataset.key;
-    th.setAttribute("aria-sort", key === projSortKey ? (projSortAsc ? "ascending" : "descending") : "none");
+    th.setAttribute(
+      "aria-sort",
+      key === projSortKey ? (projSortAsc ? "ascending" : "descending") : "none"
+    );
   });
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
@@ -197,6 +254,7 @@ function renderProjection() {
     tb.appendChild(tr);
   }
 
+  // Pager
   const pager = $("pager");
   pager.innerHTML = "";
   const btnPrev = document.createElement("button");
@@ -218,14 +276,17 @@ function renderProjection() {
   $("rowCount").textContent = projection.length;
 }
 
-Array.from(document.querySelectorAll("#projTable thead th.sortable")).forEach((th) => {
-  th.addEventListener("click", () => {
-    const key = th.dataset.key;
-    if (projSortKey === key) projSortAsc = !projSortAsc;
-    else { projSortKey = key; projSortAsc = true; }
-    renderProjection();
-  });
-});
+// Sorting: click header
+Array.from(document.querySelectorAll("#projTable thead th.sortable")).forEach(
+  (th) => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (projSortKey === key) projSortAsc = !projSortAsc;
+      else { projSortKey = key; projSortAsc = true; }
+      renderProjection();
+    });
+  }
+);
 
 /* ---------- Editable Tables (Regular & Planned) ---------- */
 function renderEditableTable() {
@@ -260,7 +321,7 @@ function renderEditableTable() {
     ptb.appendChild(tr);
   }
 
-  // Bind inputs
+  // Bind inputs (regular)
   document.querySelectorAll("#regTable input").forEach((inp) => {
     inp.addEventListener("input", (e) => {
       const id = Number(e.target.dataset.id);
@@ -273,6 +334,7 @@ function renderEditableTable() {
     }, { passive: true });
   });
 
+  // Bind inputs (planned)
   document.querySelectorAll("#planTable input").forEach((inp) => {
     inp.addEventListener("input", (e) => {
       const id = Number(e.target.dataset.id);
@@ -285,7 +347,7 @@ function renderEditableTable() {
     }, { passive: true });
   });
 
-  // Delete actions
+  // Delete buttons
   document.querySelectorAll('button[data-act="delReg"]').forEach((btn) =>
     btn.addEventListener("click", (e) => {
       const id = Number(e.target.dataset.id);
@@ -308,16 +370,23 @@ function renderEditableTable() {
 
 /* ---------- Recompute Pipeline ---------- */
 function recompute() {
-  inputs.currentAge = Number($("currentAge").value);
-  inputs.freedomAge = Number($("freedomAge").value);
-  inputs.lifeAge    = Number($("lifeAge").value);
+  inputs.currentAge            = Number($("currentAge").value);
+  inputs.freedomAge            = Number($("freedomAge").value);
+  inputs.lifeAge               = Number($("lifeAge").value);
   $("lifeAgeEcho").textContent = inputs.lifeAge;
-  inputs.inflation  = Number($("inflation").value);
-  inputs.ret        = Number($("ret").value);
-  inputs.buffer     = Number($("buffer").value);
+  inputs.inflation             = Number($("inflation").value);
+  inputs.ret                   = Number($("ret").value);
+  inputs.buffer                = Number($("buffer").value);
+
+  // New fields
+  inputs.currentCorpus         = Number($("currentCorpus").value);
+  inputs.monthlySIP            = Number($("monthlySIP").value);
+  inputs.annualRetirementIncome= Number($("annualRetirementIncome").value);
+  inputs.ter                   = Number($("ter").value);
 
   saveState();
 
+  // KPI: annual spend today
   const annualToday = regular.reduce((s, r) => {
     const active = inputs.currentAge >= r.startAge && inputs.currentAge < r.startAge + r.tenure;
     return s + (active ? r.amountToday : 0);
@@ -325,14 +394,18 @@ function recompute() {
   $("kpiAnnual").textContent = R(annualToday);
   $("kpi40x").textContent    = R(annualToday * 40);
 
-  const req = goalSeek(0, 1);
-  $("kpiReq").textContent = isFinite(req) ? R(req) : "—";
+  // Required EXTRA starting lump sum (over and above current corpus + SIP)
+  const extraReq = goalSeek(0, 1); // ±₹1 tolerance
+  $("kpiReq").textContent = isFinite(extraReq) ? R(extraReq) : "—";
 
-  projection = simulate(isFinite(req) ? req : 0);
+  // Build projection using EXTRA lump sum
+  projection = simulate(isFinite(extraReq) ? extraReq : 0);
 
+  // KPI: max corpus
   const maxCorpus = projection.reduce((m, y) => Math.max(m, y.endCorpus), -Infinity);
   $("kpiMax").textContent = R(maxCorpus);
 
+  // KPI: implied SWR in first freedom year (after income offset)
   const yFreedom = projection.find((y) => y.age === inputs.freedomAge);
   let swr = NaN;
   if (yFreedom && yFreedom.startCorpus > 0) {
@@ -340,6 +413,7 @@ function recompute() {
   }
   $("kpiSWR").textContent = P(swr);
 
+  // Render table
   page = 1;
   renderProjection();
 }
@@ -359,7 +433,9 @@ function closeAudit() {
 }
 $("auditBtn").addEventListener("click", () => openAudit(inputs.freedomAge));
 $("auditClose").addEventListener("click", closeAudit);
-$("auditGo").addEventListener("click", () => buildAudit(Number(auditAgeInput.value)));
+$("auditGo").addEventListener("click", () =>
+  buildAudit(Number(auditAgeInput.value))
+);
 backdrop.addEventListener("click", (e) => {
   if (e.target === backdrop) closeAudit();
 });
@@ -374,43 +450,68 @@ function buildAudit(age) {
     return;
   }
 
-  $("auditSummary").innerHTML = `Age <b>${age}</b> | Start: <b>${R(row.startCorpus)}</b> | Return: <b>${R(row.ret)}</b> | Spend+Buffer: <b>${R(row.totalWithBuffer)}</b> | End: <b>${R(row.endCorpus)}</b>`;
+  $("auditSummary").innerHTML = `Age <b>${age}</b> | Start: <b>${R(
+    row.startCorpus
+  )}</b> | Contribution: <b>${R(row.contrib)}</b> | Return: <b>${R(row.ret)}</b> | Spend+Buffer: <b>${R(
+    row.totalWithBuffer
+  )}</b> | End: <b>${R(row.endCorpus)}</b>`;
 
+  // regular breakdown
   const regs = regular
     .map((r) => {
       const active = age >= r.startAge && age < r.startAge + r.tenure;
       if (!active) return null;
       const yrs = age - r.startAge;
       const val = r.amountToday * Math.pow(1 + r.growth, yrs);
-      return `${r.category}: ${R(r.amountToday)} × (1+${(r.growth * 100).toFixed(1)}%)^${yrs} = <b>${R(val)}</b>`;
+      return `${r.category}: ${R(r.amountToday)} × (1+${
+        (r.growth * 100).toFixed(1)
+      }%)^${yrs} = <b>${R(val)}</b>`;
     })
     .filter(Boolean);
-  $("auditRegular").innerHTML = regs.length ? regs.map((x) => `<div>${x}</div>`).join("") : '<div class="small">— none —</div>';
+  $("auditRegular").innerHTML = regs.length
+    ? regs.map((x) => `<div>${x}</div>`).join("")
+    : '<div class="small">— none —</div>';
 
+  // planned breakdown
   const plans = planned
     .map((p) => {
       if (age !== p.eventAge) return null;
       const yrs = p.eventAge - inputs.currentAge;
       const val = p.amountToday * Math.pow(1 + p.infl, yrs);
-      return `${p.event}: ${R(p.amountToday)} × (1+${(p.infl * 100).toFixed(1)}%)^${yrs} = <b>${R(val)}</b>`;
+      return `${p.event}: ${R(p.amountToday)} × (1+${
+        (p.infl * 100).toFixed(1)
+      }%)^${yrs} = <b>${R(val)}</b>`;
     })
     .filter(Boolean);
-  $("auditPlanned").innerHTML = plans.length ? plans.map((x) => `<div>${x}</div>`).join("") : '<div class="small">— none —</div>';
+  $("auditPlanned").innerHTML = plans.length
+    ? plans.map((x) => `<div>${x}</div>`).join("")
+    : '<div class="small">— none —</div>';
 
+  // aggregation
   $("auditAgg").innerHTML = [
     `total = regular + planned = ${R(row.reg)} + ${R(row.planned)} = <b>${R(row.total)}</b>`,
-    `totalWithBuffer = total × (1 + buffer) = ${R(row.total)} × ${(inputs.buffer * 100).toFixed(1)}% = <b>${R(row.totalWithBuffer)}</b>`,
-    `return = startCorpus × returnRate = ${R(row.startCorpus)} × ${(inputs.ret * 100).toFixed(1)}% = <b>${R(row.ret)}</b>`,
-    `endCorpus = startCorpus + return − totalWithBuffer = ${R(row.startCorpus)} + ${R(row.ret)} − ${R(row.totalWithBuffer)} = <b>${R(row.endCorpus)}</b>`,
+    `totalWithBuffer = total × (1 + buffer) ${age >= inputs.freedomAge && inputs.annualRetirementIncome>0 ? `− retirement income ${R(inputs.annualRetirementIncome)} ` : ""}= <b>${R(row.totalWithBuffer)}</b>`,
+    `return = startCorpus × effectiveRate(age)`,
+    `endCorpus = startCorpus + return + contribution − totalWithBuffer = ${R(row.startCorpus)} + ${R(row.ret)} + ${R(row.contrib)} − ${R(row.totalWithBuffer)} = <b>${R(row.endCorpus)}</b>`,
   ].map((x) => `<div>${x}</div>`).join("");
 }
 
 /* ---------- Exports & Buttons ---------- */
 $("exportBtn").addEventListener("click", () => {
-  const rows = ["Age,Regular,Planned,Total,Buffer,StartCorpus,Return,EndCorpus"];
+  const rows = ["Age,Contribution,Regular,Planned,Total,Buffer,StartCorpus,Return,EndCorpus"];
   rows.push(
     ...projection.map((r) =>
-      [r.age, r.reg, r.planned, r.total, r.totalWithBuffer, r.startCorpus, r.ret, r.endCorpus].join(",")
+      [
+        r.age,
+        r.contrib,
+        r.reg,
+        r.planned,
+        r.total,
+        r.totalWithBuffer,
+        r.startCorpus,
+        r.ret,
+        r.endCorpus,
+      ].join(",")
     )
   );
   const blob = new Blob([rows.join("\n")], { type: "text/csv" });
@@ -433,44 +534,92 @@ $("loadIndicative")?.addEventListener("click", () => {
   regular = DEFAULT_REGULAR.map(x => ({ ...x }));
   planned = DEFAULT_PLANNED.map(x => ({ ...x }));
 
-  $("currentAge").value = inputs.currentAge;
-  $("freedomAge").value = inputs.freedomAge;
-  $("lifeAge").value    = inputs.lifeAge;
-  $("inflation").value  = inputs.inflation;
-  $("ret").value        = inputs.ret;
-  $("buffer").value     = inputs.buffer;
+  // Push values to inputs
+  $("currentAge").value             = inputs.currentAge;
+  $("freedomAge").value             = inputs.freedomAge;
+  $("lifeAge").value                = inputs.lifeAge;
+  $("inflation").value              = inputs.inflation;
+  $("ret").value                    = inputs.ret;
+  $("buffer").value                 = inputs.buffer;
+  $("currentCorpus").value          = inputs.currentCorpus;
+  $("monthlySIP").value             = inputs.monthlySIP;
+  $("annualRetirementIncome").value = inputs.annualRetirementIncome;
+  $("ter").value                    = inputs.ter;
 
   renderEditableTable();
   recompute();
   saveState();
 });
 
+/* ---------- Top Controls (longevity, tax, stress) ---------- */
+function markActive(groupIds, activeId) {
+  groupIds.forEach(id => {
+    const btn = $(id);
+    if (!btn) return;
+    if (id === activeId) {
+      btn.setAttribute("aria-pressed", "true");
+      btn.style.filter = "brightness(1.12)";
+    } else {
+      btn.setAttribute("aria-pressed", "false");
+      btn.style.filter = "brightness(1)";
+    }
+  });
+}
+
+$("life85")?.addEventListener("click", () => {
+  inputs.lifeAge = 85; $("lifeAge").value = 85; markActive(["life85","life90","life95"], "life85"); recompute();
+});
+$("life90")?.addEventListener("click", () => {
+  inputs.lifeAge = 90; $("lifeAge").value = 90; markActive(["life85","life90","life95"], "life90"); recompute();
+});
+$("life95")?.addEventListener("click", () => {
+  inputs.lifeAge = 95; $("lifeAge").value = 95; markActive(["life85","life90","life95"], "life95"); recompute();
+});
+
+$("taxOld")?.addEventListener("click", () => {
+  inputs.taxRegime = "old"; markActive(["taxOld","taxNew"], "taxOld"); saveState();
+});
+$("taxNew")?.addEventListener("click", () => {
+  inputs.taxRegime = "new"; markActive(["taxOld","taxNew"], "taxNew"); saveState();
+});
+
+$("stressOff")?.addEventListener("click", () => {
+  inputs.stress = "off"; markActive(["stressOff","stressOn"], "stressOff"); recompute();
+});
+$("stressOn")?.addEventListener("click", () => {
+  inputs.stress = "bear"; markActive(["stressOff","stressOn"], "stressOn"); recompute();
+});
+
 /* ---------- Init ---------- */
 (function init() {
-  // Load from URL (if any), then from localStorage
+  // URL → state, then localStorage → state
   maybeLoadFromURL();
   loadState();
 
-  // IMPORTANT: Seed defaults if tables are empty (e.g., old saved empty state)
-  if (!Array.isArray(regular) || regular.length === 0) {
-    regular = DEFAULT_REGULAR.map(x => ({ ...x }));
-  }
-  if (!Array.isArray(planned) || planned.length === 0) {
-    planned = DEFAULT_PLANNED.map(x => ({ ...x }));
-  }
+  // Seed defaults if tables are empty
+  if (!Array.isArray(regular) || regular.length === 0) regular = DEFAULT_REGULAR.map(x => ({ ...x }));
+  if (!Array.isArray(planned) || planned.length === 0) planned = DEFAULT_PLANNED.map(x => ({ ...x }));
 
-  // Push inputs into UI
-  $("currentAge").value = inputs.currentAge;
-  $("freedomAge").value = inputs.freedomAge;
-  $("lifeAge").value    = inputs.lifeAge;
-  $("inflation").value  = inputs.inflation;
-  $("ret").value        = inputs.ret;
-  $("buffer").value     = inputs.buffer;
+  // Reflect inputs to UI
+  $("currentAge").value             = inputs.currentAge;
+  $("freedomAge").value             = inputs.freedomAge;
+  $("lifeAge").value                = inputs.lifeAge;
+  $("inflation").value              = inputs.inflation;
+  $("ret").value                    = inputs.ret;
+  $("buffer").value                 = inputs.buffer;
+  $("currentCorpus").value          = inputs.currentCorpus;
+  $("monthlySIP").value             = inputs.monthlySIP;
+  $("annualRetirementIncome").value = inputs.annualRetirementIncome;
+  $("ter").value                    = inputs.ter;
+
+  // Set button visual states
+  markActive(["life85","life90","life95"], `life${inputs.lifeAge}`);
+  markActive(["taxOld","taxNew"], inputs.taxRegime === "old" ? "taxOld" : "taxNew");
+  markActive(["stressOff","stressOn"], inputs.stress === "bear" ? "stressOn" : "stressOff");
 
   // Bind top inputs
-  ["currentAge", "freedomAge", "lifeAge", "inflation", "ret", "buffer"].forEach(
-    (id) => $(id).addEventListener("input", recompute)
-  );
+  ["currentAge","freedomAge","lifeAge","inflation","ret","buffer","currentCorpus","monthlySIP","ter","annualRetirementIncome"]
+    .forEach(id => $(id).addEventListener("input", recompute));
 
   // Add-row buttons
   $("addReg").addEventListener("click", () => {
@@ -500,7 +649,7 @@ $("loadIndicative")?.addEventListener("click", () => {
     recompute();
   });
 
-  // Render tables & compute
+  // Render & compute
   renderEditableTable();
   recompute();
 })();
