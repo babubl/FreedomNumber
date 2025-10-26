@@ -48,11 +48,6 @@ a:hover { text-decoration: underline; }
   padding: 12px 24px;
 }
 .nav__brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
-.nav__flag {
-  width: 16px; height: 16px; border-radius: 2px;
-  background: linear-gradient(180deg,#ff9933 0 33%,#fff 33% 66%,#138808 66% 100%);
-  border: 1px solid rgba(255,255,255,.15);
-}
 .nav__links a {
   color: var(--muted);
   font-size: 14px;
@@ -121,6 +116,13 @@ a:hover { text-decoration: underline; }
 }
 .btn:hover { filter: brightness(1.05); }
 .btn:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Pressed (toggle) state */
+.btn[aria-pressed="true"] {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+  filter: brightness(1.12);
+}
 
 /* ---------- Cards & Sections ---------- */
 .section { margin: 32px 0; }
@@ -269,6 +271,10 @@ tbody tr:hover { background: rgba(255,255,255,0.05); }
   flex-wrap: wrap;
   padding: 12px 24px;
 }
+
+/* ---------- Utility layout fixes ---------- */
+.form-grid > div { min-width: 0; }
+.grid .actions { padding-top: 2px; }
 
 /* ---------- Print ---------- */
 @media print {
