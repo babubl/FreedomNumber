@@ -12,8 +12,8 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://babubl.github.io/FreedomNumber/" />
   <meta property="og:image" content="assets/cover.png" />
-  <link rel="stylesheet" href="style.css?v=2" />
-  <script defer src="script.js?v=3"></script>
+  <link rel="stylesheet" href="style.css?v=4" />
+  <script defer src="script.js?v=6"></script>
 </head>
 <body>
   <!-- Top Navigation -->
@@ -58,24 +58,24 @@
           <ul class="small">
             <li>Per-item annual expenses with growth & tenure</li>
             <li>Planned one-time events at specific ages</li>
-            <li>Annual buffer on total spend</li>
-            <li>Post-tax constant return rate</li>
+            <li>Annual buffer on total spend (see policy)</li>
+            <li>Post-tax constant return rate, less TER</li>
           </ul>
         </div>
         <div>
-          <label><b>Not Modelled</b></label>
+          <label><b>India Context</b></label>
           <ul class="small">
-            <li>Sequence-of-returns variability</li>
-            <li>Product-specific tax/fee schedules</li>
-            <li>Liabilities (EMIs, loans)</li>
+            <li>Education & healthcare inflation often &gt; headline CPI</li>
+            <li>Tax & fees reduce realised returns (TER haircut applied)</li>
+            <li>Longer horizons common; sensitivity to longevity provided</li>
           </ul>
         </div>
         <div>
-          <label><b>Controls</b></label>
+          <label><b>Policy & Limits</b></label>
           <ul class="small">
-            <li>Prefill India defaults; edit as needed</li>
-            <li>Full yearly projection & CSV export</li>
-            <li>Row-level <b>Audit</b> with formulas</li>
+            <li><b>Buffer policy:</b> buffer applies on <i>gross spend</i>; retirement income is deducted afterwards</li>
+            <li>Sequence risk: optional “Bear Decade” (−2% real for 10 years post-freedom)</li>
+            <li>Tax regime toggle is informational for now (no impact yet)</li>
           </ul>
         </div>
       </div>
@@ -122,7 +122,7 @@
             <div>
               <label for="buffer">Safety Buffer on Spend</label>
               <input id="buffer" type="number" inputmode="decimal" step="0.001" value="0.15" />
-              <span class="help">Applied to each year’s total spend</span>
+              <span class="help">Applied to gross spend each year</span>
             </div>
           </div>
 
@@ -162,26 +162,25 @@
               </div>
             </div>
             <div>
-              <label for="taxRegime"><b>Tax Regime</b></label>
+              <label for="taxRegime"><b>Tax Regime</b> <span class="small">(no impact yet)</span></label>
               <div class="actions" style="gap:8px">
-                <button class="btn btn--secondary" id="taxOld">Old</button>
-                <button class="btn btn--secondary" id="taxNew">New</button>
+                <button class="btn btn--secondary" id="taxOld" aria-disabled="true" title="Informational toggle; no impact yet">Old</button>
+                <button class="btn btn--secondary" id="taxNew" aria-disabled="true" title="Informational toggle; no impact yet">New</button>
               </div>
-              <span class="small">Used for indicative post-tax return modelling (later step)</span>
             </div>
             <div>
               <label><b>Stress Test</b></label>
               <div class="actions" style="gap:8px">
                 <button class="btn btn--secondary" id="stressOff">Off</button>
-                <button class="btn btn--secondary" id="stressOn">Bear Decade</button>
+                <button class="btn btn--secondary" id="stressOn" title="−2% real for first 10 years after freedom age">Bear Decade</button>
               </div>
-              <span class="small">Illustrative −2% real in first 10 years (wired in next update)</span>
+              <span class="small">Illustrative −2% real in first 10 years <b>after freedom age</b></span>
             </div>
           </div>
         </div>
 
         <!-- Key Metrics -->
-        <div class="card">
+        <div class="card" id="kpiLive" role="status" aria-live="polite">
           <h2>Key Metrics</h2>
           <div class="grid cols-3 kpi-grid">
             <div class="kpi">
@@ -193,7 +192,7 @@
               <div class="kpi__v" id="kpi40x">—</div>
             </div>
             <div class="kpi">
-              <div class="kpi__t">Required Starting Corpus</div>
+              <div class="kpi__t">Additional Lump Sum Needed (Today)</div>
               <div class="kpi__v" id="kpiReq">—</div>
             </div>
           </div>
@@ -206,9 +205,9 @@
               <div class="kpi__t">Implied SWR in Year-1*</div>
               <div class="kpi__v" id="kpiSWR">—</div>
             </div>
-            <div class="kpi">
-              <div class="kpi__t">Rows</div>
-              <div class="kpi__v" id="rowCount">—</div>
+            <div class="kpi" id="kpiSurplusWrap">
+              <div class="kpi__t">Surplus / Shortfall at Life Expectancy</div>
+              <div class="kpi__v" id="kpiSurplus">—</div>
             </div>
           </div>
           <p class="small">*At Freedom Age: (Spend + Buffer) ÷ Starting Corpus for that year.</p>
@@ -336,8 +335,10 @@
             Planned @ event age E (inflation i): amountToday × (1+i)^(E − currentAge)<br><br>
             total = regular + planned<br>
             totalWithBuffer = total × (1 + buffer)<br>
-            return = startCorpus × returnRate<br>
-            endCorpus = startCorpus + return − totalWithBuffer
+            retirementIncomeOffset (post-freedom) = max(0, totalWithBuffer − retirementIncome)<br><br>
+            effectiveRate(age) = (return − TER), stressed −2% real for first 10 post-freedom years if enabled<br>
+            return = startCorpus × effectiveRate(age)<br>
+            endCorpus = startCorpus + return + contribution − retirementIncomeOffset
           </div>
         </div>
       </div>
