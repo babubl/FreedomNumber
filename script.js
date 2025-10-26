@@ -1,29 +1,29 @@
 /* ===========================================================
-   FreedomNumber — script.js (buttons fixed, robust bindings)
-   - Add Item / Add Event now work reliably
-   - Stress toggle & Longevity preset buttons fixed
-   - Editable tables preserved after every change
-   - Auto-compute stays intact
+   FreedomNumber — script.js
+   - Buttons fixed (no accidental form submit)
+   - Existing rows become editable on load
+   - Add Item / Add Event append editable rows
+   - Auto-compute Key Metrics + table
    =========================================================== */
 
 (function () {
   "use strict";
 
-  // ---------- DOM helpers ----------
+  // ---------- Helpers ----------
   const $  = (id)  => document.getElementById(id);
   const q  = (sel) => document.querySelector(sel);
   const qa = (sel) => Array.from(document.querySelectorAll(sel));
 
   const num = (id) => parseFloat($(id)?.value || "0") || 0;
-  const money = (n) => (isNaN(n) ? "—" : `₹ ${Math.round(n).toLocaleString("en-IN")}`);
-  const pct = (x, d=2) => (isNaN(x) ? "—" : `${(x*100).toFixed(d)}%`);
-
   const cleanNum = (str) => parseFloat(String(str).replace(/[₹,\s]/g, "")) || 0;
   const escapeHtml = (s) => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 
+  const money = (n) => (isNaN(n) ? "—" : `₹ ${Math.round(n).toLocaleString("en-IN")}`);
+  const pct   = (x, d=2) => (isNaN(x) ? "—" : `${(x*100).toFixed(d)}%`);
+  const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
+
   // ---------- Tables: read current state ----------
   function getTables() {
-    // Prefer inputs (editable state). If not present, fall back to text.
     const regs = qa("#regTable tbody tr").map(tr => {
       const td = tr.querySelectorAll("td");
       const o = {
@@ -65,7 +65,7 @@
         <td class="num"><input type="number" step="0.001" value="${+r.growth || 0}" data-field="growth" /></td>
         <td class="num"><input type="number" step="1" value="${+r.tenure || 0}" data-field="tenure" /></td>
         <td class="num"><input type="number" step="1" value="${+r.start || 0}" data-field="start" /></td>
-        <td class="num"><button class="btn btn--secondary" data-action="del-reg" data-idx="${idx}">Remove</button></td>
+        <td class="num"><button type="button" class="btn btn--secondary" data-action="del-reg" data-idx="${idx}">Remove</button></td>
       `;
       regBody.appendChild(tr);
     });
@@ -78,17 +78,17 @@
         <td class="num"><input type="number" step="1" value="${+p.event || 0}" data-field="event" /></td>
         <td class="num"><input type="number" step="1" value="${+p.amount || 0}" data-field="amount" /></td>
         <td class="num"><input type="number" step="0.001" value="${+p.infl || 0}" data-field="infl" /></td>
-        <td class="num"><button class="btn btn--secondary" data-action="del-plan" data-idx="${idx}">Remove</button></td>
+        <td class="num"><button type="button" class="btn btn--secondary" data-action="del-plan" data-idx="${idx}">Remove</button></td>
       `;
       planBody.appendChild(tr);
     });
 
-    // Live recompute on table input changes (bind to current inputs only)
+    // Live recompute on edits
     qa("#regTable input, #planTable input").forEach(inp => {
       inp.addEventListener("input", recompute, { passive: true });
     });
 
-    // Row-level delete via event delegation (single listener per tbody)
+    // Row deletes via delegation (one handler per tbody)
     regBody.onclick = (e) => {
       const btn = e.target.closest("button[data-action='del-reg']");
       if (!btn) return;
@@ -110,10 +110,10 @@
     };
   }
 
-  // ---------- Bootstrap: convert initial static rows to editable once ----------
+  // ---------- Bootstrap: convert initial static rows to inputs (once) ----------
   function bootstrapTablesFromDOM() {
-    const hasInputs = !!q("#regTable tbody input") || !!q("#planTable tbody input");
-    if (hasInputs) return; // already editable
+    const alreadyEditable = !!q("#regTable tbody input") || !!q("#planTable tbody input");
+    if (alreadyEditable) return;
 
     const regs = [];
     qa("#regTable tbody tr").forEach(tr => {
@@ -151,25 +151,25 @@
       monthlySIP, annualRetirementIncome, ter, stressOn
     } = inputs;
 
-    const rEffBase = ret - ter; // net nominal (post-tax minus TER)
+    const rEffBase = ret - ter; // nominal net (post-tax minus TER)
     const proj = [];
     let corpus = currentCorpus;
 
-    // grow to freedom with SIPs
+    // Pre-freedom growth with SIPs
     for (let age = currentAge; age < freedomAge; age++) {
       corpus += monthlySIP * 12;
       corpus *= 1 + rEffBase;
     }
 
     for (let age = freedomAge; age <= lifeAge; age++) {
-      // regular
+      // Regular spend at age (respect start & tenure)
       const regSum = regs.reduce((s, r) => {
         const active = age >= r.start && age < r.start + r.tenure;
         if (!active) return s;
         return s + r.amount * Math.pow(1 + r.growth, age - r.start);
       }, 0);
 
-      // planned
+      // Planned spend if event hits this age
       const planSum = plans.reduce((s, p) => {
         if (age !== p.event) return s;
         const yrs = Math.max(0, age - currentAge);
@@ -179,7 +179,7 @@
       const total = regSum + planSum;
       const totalWithBuffer = total * (1 + buffer);
 
-      // stressed nominal (−2% real for first 10 post-freedom years)
+      // Stress: reduce real return by 2% in first 10 post-freedom years
       let rEff = rEffBase;
       if (stressOn && age < freedomAge + 10) {
         const real = (1 + rEffBase) / (1 + inflation) - 1;
@@ -188,7 +188,7 @@
       }
 
       const retAmt = corpus * rEff;
-      const spendAfterIncome = Math.max(0, totalWithBuffer - annualRetirementIncome);
+      const spendAfterIncome = Math.max(0, totalWithBuffer - annualRetirementIncome); // policy: income deducted after buffer
       const endCorpus = corpus + retAmt - spendAfterIncome;
 
       proj.push({
@@ -208,7 +208,7 @@
     return proj;
   }
 
-  // annual spend today = regular at currentAge (+ planned only if event is this year)
+  // Annual spend today = regular at currentAge (+ planned only if event is this year)
   function computeAnnualToday(regs, plans, currentAge) {
     const regSum = regs.reduce((a, r) => {
       const active = currentAge >= r.start && currentAge < r.start + r.tenure;
@@ -219,7 +219,7 @@
     return regSum + planToday;
   }
 
-  // ---------- Renderers ----------
+  // ---------- Rendering ----------
   function renderProjection(proj) {
     const tbody = q("#projTable tbody");
     if (!tbody) return;
@@ -242,21 +242,22 @@
 
   function renderKPIs(proj, inputs, regs, plans) {
     if (!proj.length) return;
+
     const first = proj[0];
     const last  = proj[proj.length - 1];
 
     const annualToday = computeAnnualToday(regs, plans, inputs.currentAge);
-    const rule40 = annualToday * 40;
-    const year1Spend = Math.max(0, first.totalWithBuffer - inputs.annualRetirementIncome);
-    const swr = first.startCorpus > 0 ? year1Spend / first.startCorpus : NaN;
-    const maxCorpus = Math.max(...proj.map(r => r.startCorpus));
-    const end = last.endCorpus;
-    const gap = end < 0 ? Math.abs(end) : 0;
+    const rule40      = annualToday * 40;
+    const year1Spend  = Math.max(0, first.totalWithBuffer - inputs.annualRetirementIncome);
+    const swr         = first.startCorpus > 0 ? year1Spend / first.startCorpus : NaN;
+    const maxCorpus   = Math.max(...proj.map(r => r.startCorpus));
+    const end         = last.endCorpus;
+    const gap         = end < 0 ? Math.abs(end) : 0;
 
     setText("kpiAnnual",        money(annualToday));
     setText("kpi40x",           money(rule40));
     setText("kpiCorpusFreedom", money(first.startCorpus));
-    setText("kpiSpendYear1",    money(year1Spend));
+    setText("kpiSpendYear1",    money(year1Spend)); // shown if you added this KPI in HTML
     setText("kpiSWR",           pct(swr));
     setText("kpiMax",           money(maxCorpus));
     setText("rowCount",         String(proj.length));
@@ -291,7 +292,7 @@
       if (banner) banner.textContent = `Your plan balances near ₹0 at age ${inputs.lifeAge}.`;
     }
 
-    // Narrative
+    // Narrative (plain English)
     const band = !isFinite(swr) ? "—" : (swr <= 0.04 ? "conservative" : (swr <= 0.06 ? "reasonable" : "aggressive"));
     const narrative =
       `At age ${inputs.freedomAge}, corpus is ${money(first.startCorpus)}. ` +
@@ -303,8 +304,6 @@
           : `This plan is calibrated to finish near ₹0 by age ${inputs.lifeAge}.`);
     setText("kpiNarrative", narrative);
   }
-
-  function setText(id, val) { const el = $(id); if (el) el.textContent = val; }
 
   // ---------- Recompute ----------
   function recompute() {
@@ -335,19 +334,18 @@
     } catch {}
   }
 
-  // ---------- Init & robust bindings ----------
+  // ---------- Init ----------
   function init() {
-    // 1) Make existing rows editable once at start
+    // 1) Convert default static rows to editable inputs (once)
     bootstrapTablesFromDOM();
 
-    // 2) Input fields — recompute on change (non-table inputs)
+    // 2) Non-table inputs: recompute on change
     qa("#calc input").forEach(inp => {
-      // ignore table inputs here (tables re-bind on each render)
-      if (inp.closest("#regTable") || inp.closest("#planTable")) return;
+      if (inp.closest("#regTable") || inp.closest("#planTable")) return; // tables bind separately
       inp.addEventListener("input", recompute, { passive: true });
     });
 
-    // 3) Stress toggle — explicit pressed state
+    // 3) Stress toggle buttons
     const on  = $("#stressOn");
     const off = $("#stressOff");
     if (on && off) {
@@ -375,7 +373,7 @@
       });
     });
 
-    // 5) Add Item / Add Event (works after any number of re-renders)
+    // 5) Add Item / Add Event
     const addReg = $("#addReg");
     if (addReg) addReg.addEventListener("click", () => {
       const state = getTables();
