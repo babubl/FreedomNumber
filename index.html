@@ -4,19 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FreedomNumber — Retirement Corpus Calculator (India)</title>
-  <meta name="description" content="A transparent, India-focused retirement corpus calculator for beginners and experts. Model expenses, one-time events, and stress scenarios with a clear audit trail." />
-  <meta property="og:title" content="FreedomNumber — Retirement Corpus Calculator (India)" />
-  <meta property="og:description" content="Plan with Indian inflation, post-tax returns, real-world milestones, and a safety margin. See key metrics and audit the math." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://babubl.github.io/FreedomNumber/" />
-  <link rel="icon" href="assets/favicon.ico" />
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <meta name="description" content="An India-focused retirement corpus calculator. Model regular and one-time expenses, safety margin, stress scenarios, and see clear key metrics with a transparent audit." />
   <link rel="stylesheet" href="style.css?v=9" />
-  <!-- JS arrives next; keep version fresh when you add it -->
+  <!-- Keep your current JS include/version -->
   <script defer src="script.js?v=16"></script>
 </head>
 <body>
-  <!-- Top Navigation -->
+  <!-- Header -->
   <header class="nav" role="banner">
     <div class="nav__brand">
       <span class="nav__name">FreedomNumber</span>
@@ -29,14 +23,12 @@
   </header>
 
   <main class="wrap">
-
     <!-- Hero -->
-    <section class="hero section" aria-label="Overview">
+    <section class="hero section">
       <p class="eyebrow">India-focused</p>
       <h1 class="title">Retirement Corpus Calculator</h1>
       <p class="subtitle">
-        A clear way to estimate your retirement corpus for India. Start simple; open Advanced
-        for detailed control. See key metrics instantly and audit every step.
+        Estimate your retirement corpus with Indian assumptions. Keep it simple, or add details when you’re ready.
       </p>
       <div class="actions">
         <a class="btn btn--primary" href="#calc">Open Calculator</a>
@@ -55,189 +47,179 @@
           </div>
         </div>
 
-        <!-- Mode Switch -->
-        <div class="actions" role="tablist" aria-label="Mode">
-          <button type="button" id="modeSimpleBtn" class="btn btn--primary" role="tab" aria-selected="true">Simple</button>
-          <button type="button" id="modeAdvancedBtn" class="btn btn--secondary" role="tab" aria-selected="false">Advanced</button>
+        <div class="grid cols-3 form-grid">
+          <div>
+            <label for="currentAge">Current age</label>
+            <input id="currentAge" type="number" inputmode="numeric" value="40" />
+          </div>
+          <div>
+            <label for="freedomAge">Target retirement age</label>
+            <input id="freedomAge" type="number" inputmode="numeric" value="55" />
+          </div>
+          <div>
+            <label for="lifeAge">Life expectancy</label>
+            <input id="lifeAge" type="number" inputmode="numeric" value="85" />
+            <span class="help">How long your money needs to last. Quick set:
+              <button type="button" class="btn btn--secondary" id="life85">85</button>
+              <button type="button" class="btn btn--secondary" id="life90">90</button>
+              <button type="button" class="btn btn--secondary" id="life95">95</button>
+            </span>
+          </div>
+
+          <div>
+            <label for="currentCorpus">Current retirement corpus (₹)</label>
+            <input id="currentCorpus" type="number" inputmode="decimal" value="2000000" />
+            <span class="help">Sum NPS/EPF/PPF, equity/debt funds, gold/bonds <b>saved for retirement</b>. Exclude emergency & other goals.</span>
+          </div>
+          <div>
+            <label for="monthlySIP">Monthly SIP till retirement (₹)</label>
+            <input id="monthlySIP" type="number" inputmode="decimal" value="30000" />
+            <span class="help">Continues until retirement age.</span>
+          </div>
+          <div>
+            <label for="annualRetirementIncome">Expected yearly income in retirement (₹/yr)</label>
+            <input id="annualRetirementIncome" type="number" inputmode="decimal" value="240000" />
+            <span class="help">Pension, rent, annuity etc. during retirement. <b>Reduces</b> withdrawals from your corpus.</span>
+          </div>
+
+          <div>
+            <label for="ret">Expected annual return (after tax &amp; fees)</label>
+            <input id="ret" type="number" inputmode="decimal" step="0.001" value="0.08" />
+            <span class="help">Use what you expect to keep after taxes & fees. If unsure, 0.06–0.08 (6–8%).</span>
+          </div>
+          <div>
+            <label for="inflation">General inflation (default)</label>
+            <input id="inflation" type="number" inputmode="decimal" step="0.001" value="0.06" />
+            <span class="help">Used where item-level growth isn’t specified.</span>
+          </div>
+          <div>
+            <label for="buffer">Safety buffer on yearly spend</label>
+            <input id="buffer" type="number" inputmode="decimal" step="0.001" value="0.15" />
+            <span class="help">Adds a cushion for surprises (medical, repairs). If unsure, keep 0.15 (15%).</span>
+          </div>
+
+          <div>
+            <label for="ter">Fund expense ratio (optional)</label>
+            <input id="ter" type="number" inputmode="decimal" step="0.001" value="0.0000" />
+            <span class="help">Only needed if your return above is <i>before</i> fees. Otherwise leave 0.</span>
+          </div>
+          <div>
+            <label><b>Stress test</b></label>
+            <div class="actions" style="gap:8px">
+              <button type="button" class="btn btn--secondary" id="stressOff" aria-pressed="true">Off</button>
+              <button type="button" class="btn btn--secondary" id="stressOn" aria-pressed="false" title="−2% real for first 10 years after retirement">Bear decade</button>
+            </div>
+            <span class="small">Illustrative −2% real for first 10 years <b>after retirement age</b>.</span>
+          </div>
         </div>
 
-        <!-- SIMPLE MODE (default) -->
-        <div id="simplePanel" class="section">
-          <div class="grid cols-3 form-grid">
-            <div>
-              <label for="currentAge">Current age</label>
-              <input id="currentAge" type="number" inputmode="numeric" value="40" />
-            </div>
-            <div>
-              <label for="freedomAge">Target retirement age</label>
-              <input id="freedomAge" type="number" inputmode="numeric" value="55" />
-            </div>
-            <div>
-              <label for="lifeAge">Life expectancy</label>
-              <input id="lifeAge" type="number" inputmode="numeric" value="85" />
-              <span class="help">Quick set: <button type="button" class="btn btn--secondary" id="life85">85</button> <button type="button" class="btn btn--secondary" id="life90">90</button> <button type="button" class="btn btn--secondary" id="life95">95</button></span>
-            </div>
-
-            <div>
-              <label for="currentCorpus">Current retirement corpus (₹)</label>
-              <input id="currentCorpus" type="number" inputmode="decimal" value="2000000" />
-              <span class="help">Sum NPS/EPF/PPF, equity/debt funds, gold/bonds <i>earmarked for retirement</i>.</span>
-            </div>
-            <div>
-              <label for="monthlySIP">Monthly SIP till retirement (₹)</label>
-              <input id="monthlySIP" type="number" inputmode="decimal" value="30000" />
-              <span class="help">Continues until retirement age.</span>
-            </div>
-            <div>
-              <label for="annualRetirementIncome">Expected yearly income in retirement (₹/yr)</label>
-              <input id="annualRetirementIncome" type="number" inputmode="decimal" value="240000" />
-              <span class="help">Pension, rent, annuity. Reduces withdrawals from your corpus.</span>
-            </div>
-
-            <div>
-              <label for="ret">Expected annual return (after tax &amp; fees)</label>
-              <input id="ret" type="number" inputmode="decimal" step="0.001" value="0.08" />
-              <span class="help">Use what you expect to actually keep p.a. If unsure, 0.06–0.08.</span>
-            </div>
+        <!-- Regular expenses -->
+        <div class="card section" aria-label="Regular expenses">
+          <div class="card__head">
+            <h3>Regular expenses</h3>
+            <button type="button" class="btn btn--secondary" id="addReg">Add item</button>
           </div>
-
-          <div class="grid cols-3" style="margin-top:8px">
-            <div>
-              <label><b>Stress test</b></label>
-              <div class="actions" style="gap:8px">
-                <button type="button" class="btn btn--secondary" id="stressOff" aria-pressed="true">Off</button>
-                <button type="button" class="btn btn--secondary" id="stressOn" aria-pressed="false" title="−2% real for first 10 years after retirement">Bear decade</button>
-              </div>
-              <span class="small">Illustrative −2% real for first 10 years <b>after retirement age</b>.</span>
-            </div>
+          <p class="small">
+            <b>Tip:</b> <u>Start age</u> = when this expense begins. <u>Tenure</u> = years it runs.
+            For lifetime items, set Tenure ≈ Life expectancy − Start age.
+          </p>
+          <div class="table-wrap">
+            <table id="regTable">
+              <thead>
+                <tr>
+                  <th scope="col">Category</th>
+                  <th class="num" scope="col">Amount today (₹/yr)</th>
+                  <th class="num" scope="col">Growth / yr</th>
+                  <th class="num" scope="col">Tenure (yrs)</th>
+                  <th class="num" scope="col">Start age</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Household &amp; utilities</td>
+                  <td class="num">360000</td>
+                  <td class="num">0.06</td>
+                  <td class="num">45</td>
+                  <td class="num">40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Groceries &amp; essentials</td>
+                  <td class="num">240000</td>
+                  <td class="num">0.06</td>
+                  <td class="num">45</td>
+                  <td class="num">40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Healthcare &amp; insurance</td>
+                  <td class="num">150000</td>
+                  <td class="num">0.10</td>
+                  <td class="num">45</td>
+                  <td class="num">40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Transport</td>
+                  <td class="num">120000</td>
+                  <td class="num">0.05</td>
+                  <td class="num">45</td>
+                  <td class="num">40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Discretionary</td>
+                  <td class="num">180000</td>
+                  <td class="num">0.07</td>
+                  <td class="num">20</td>
+                  <td class="num">55</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <!-- ADVANCED MODE (collapsed by default) -->
-        <div id="advancedPanel" class="section" hidden>
-          <div class="grid cols-3 form-grid">
-            <div>
-              <label for="inflation">General inflation (default)</label>
-              <input id="inflation" type="number" inputmode="decimal" step="0.001" value="0.06" />
-              <span class="help">Used when item-level growth isn’t specified.</span>
-            </div>
-            <div>
-              <label for="buffer">Safety margin on yearly spend</label>
-              <input id="buffer" type="number" inputmode="decimal" step="0.001" value="0.15" />
-              <span class="help">Cushion for surprises. If unsure, keep 0.15 (15%).</span>
-            </div>
-            <div>
-              <label for="ter">Fund expense ratio (optional)</label>
-              <input id="ter" type="number" inputmode="decimal" step="0.001" value="0.0000" />
-              <span class="help">Only needed if your return above is <i>before</i> fees. Otherwise leave 0.</span>
-            </div>
+        <!-- Planned / one-time events -->
+        <div class="card section" aria-label="Planned one-time events">
+          <div class="card__head">
+            <h3>Planned / one-time events</h3>
+            <button type="button" class="btn btn--secondary" id="addPlan">Add event</button>
           </div>
-
-          <!-- Regular Expenses -->
-          <div class="card section" aria-label="Regular expenses">
-            <div class="card__head">
-              <h3>Regular expenses</h3>
-              <button type="button" class="btn btn--secondary" id="addReg">Add item</button>
-            </div>
-            <p class="small">Annual amounts in today’s ₹. Each item can grow at its own rate and run for a chosen age range.</p>
-            <div class="table-wrap">
-              <table id="regTable">
-                <thead>
-                  <tr>
-                    <th scope="col">Category</th>
-                    <th class="num" scope="col">Amount today (₹/yr)</th>
-                    <th class="num" scope="col">Growth / yr</th>
-                    <th class="num" scope="col">From age</th>
-                    <th class="num" scope="col">Until age</th>
-                    <th scope="col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Household &amp; utilities</td>
-                    <td class="num">360000</td>
-                    <td class="num">0.06</td>
-                    <td class="num">40</td>
-                    <td class="num">85</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td>Groceries &amp; essentials</td>
-                    <td class="num">240000</td>
-                    <td class="num">0.06</td>
-                    <td class="num">40</td>
-                    <td class="num">85</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td>Healthcare &amp; insurance</td>
-                    <td class="num">150000</td>
-                    <td class="num">0.10</td>
-                    <td class="num">40</td>
-                    <td class="num">85</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td>Transport</td>
-                    <td class="num">120000</td>
-                    <td class="num">0.05</td>
-                    <td class="num">40</td>
-                    <td class="num">85</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td>Discretionary</td>
-                    <td class="num">180000</td>
-                    <td class="num">0.07</td>
-                    <td class="num">55</td>
-                    <td class="num">75</td>
-                    <td></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <p class="small">Events at specific ages (education, renovation). Amounts inflate from today by the item’s inflation.</p>
+          <div class="table-wrap">
+            <table id="planTable">
+              <thead>
+                <tr>
+                  <th scope="col">Event</th>
+                  <th class="num" scope="col">Event age</th>
+                  <th class="num" scope="col">Amount today (₹)</th>
+                  <th class="num" scope="col">Inflation</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Child higher education</td>
+                  <td class="num">50</td>
+                  <td class="num">1000000</td>
+                  <td class="num">0.06</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Home renovation</td>
+                  <td class="num">60</td>
+                  <td class="num">800000</td>
+                  <td class="num">0.05</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          <!-- Planned / One-time -->
-          <div class="card section" aria-label="Planned one-time events">
-            <div class="card__head">
-              <h3>Planned / one-time events</h3>
-              <button type="button" class="btn btn--secondary" id="addPlan">Add event</button>
-            </div>
-            <p class="small">Events at specific ages (education, renovation). Amounts inflate from today by the item’s inflation.</p>
-            <div class="table-wrap">
-              <table id="planTable">
-                <thead>
-                  <tr>
-                    <th scope="col">Event</th>
-                    <th class="num" scope="col">Event age</th>
-                    <th class="num" scope="col">Amount today (₹)</th>
-                    <th class="num" scope="col">Inflation</th>
-                    <th scope="col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Child higher education</td>
-                    <td class="num">50</td>
-                    <td class="num">1000000</td>
-                    <td class="num">0.06</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td>Home renovation</td>
-                    <td class="num">60</td>
-                    <td class="num">800000</td>
-                    <td class="num">0.05</td>
-                    <td></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div> <!-- /advancedPanel -->
-      </div> <!-- /card -->
+      </div>
     </section>
 
     <!-- Results / KPIs -->
@@ -302,17 +284,17 @@
             <div class="kpi">
               <div class="kpi__t">Rule-of-thumb corpus (40×)</div>
               <div class="kpi__v" id="kpi40x">—</div>
-              <div class="kpi__sub">US-derived proxy shown for context only.</div>
+              <div class="kpi__sub">US-derived proxy; India assumptions differ.</div>
             </div>
           </div>
-          <p class="small">The 4%/40× rule was derived in the US under lower inflation, 30-year horizon, and before taxes/fees.
-          Your India-specific number above is computed year-by-year with itemized expenses and buffers.</p>
+          <p class="small">The 4%/40× rule was built for US data (lower inflation, ~30-year horizon, pre-tax).
+          Your number above uses India-specific, year-by-year modeling with buffers.</p>
         </details>
 
       </div>
     </section>
 
-    <!-- Projection Table & Tools -->
+    <!-- Projection & tools -->
     <section class="section">
       <div class="card" aria-label="Projection & tools">
         <div class="card__head">
@@ -323,7 +305,7 @@
             <button type="button" class="btn btn--primary" id="exportBtn" title="Export projection as CSV">Export CSV</button>
           </div>
         </div>
-        <p class="small">Ending corpus is targeted near ₹0 at age <span id="lifeAgeEcho">85</span> (± tolerance). Click a row to audit that year.</p>
+        <p class="small">Ending corpus is targeted near ₹0 at age <span id="lifeAgeEcho">85</span>. Click a row to audit that year.</p>
 
         <div class="table-wrap">
           <table id="projTable" aria-label="Projection table">
@@ -341,7 +323,6 @@
             </thead>
             <tbody></tbody>
           </table>
-          <div class="pager" id="pager"></div>
         </div>
       </div>
     </section>
@@ -350,12 +331,11 @@
     <section id="method" class="section card" aria-label="Methodology & Assumptions">
       <h2>Methodology & assumptions</h2>
       <p class="small">
-        The calculator projects cash flows year-by-year with line-item expenses and planned events. Each year we add a safety margin,
-        apply your net return (after tax & fees), deduct any retirement income, and carry the corpus forward. Stress testing reduces
-        real return by −2% for the first 10 years after retirement. See the Audit for a worked row.
+        We project cash flows year-by-year with line-item expenses (using each item’s growth), planned events (inflated from today),
+        a safety margin on total spend, and your expected net annual return (after tax & fees). We deduct any retirement income and
+        carry the corpus forward. Optional stress test: −2% real for first 10 years post-retirement.
       </p>
     </section>
-
   </main>
 
   <!-- Footer -->
@@ -396,7 +376,7 @@
         <div class="audit-block">
           <b>Formulas</b>
           <div class="mono small">
-            Regular @ age A (from F to U, growth g): amountToday × (1+g)^(A − F), only if F ≤ A ≤ U<br><br>
+            Regular @ age A (start S, tenure T, growth g): if S ≤ A &lt; S+T ⇒ amount × (1+g)^(A − S)<br><br>
             Planned @ event age E (inflation i): amountToday × (1+i)^(E − currentAge)<br><br>
             total = regular + planned<br>
             totalWithBuffer = total × (1 + safetyMargin)<br>
